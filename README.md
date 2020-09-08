@@ -10,6 +10,7 @@
 3. [General prerequisites](README.md#general-prerequisites)
 4. [Data Schema](README.md#data-schema)
 5. [Apache Airflow Chart](README.md#apache-airflow-chart)
+6. [How to Start](README.md#how-to-start)
 
 # Description
 This project contains a process to extract US I94 immigration and demographic data stored in AWS S3, transform with Spark and load back to S3 as parquet files.
@@ -18,4 +19,14 @@ The ETL process is orchestrated with Apache Airflow.
 # General Prerequisites
 # Data Schema
 # Apache Airflow Chart
+# How to start
+## Create AWS Account
+You need to have an AWS account in order to use this application. If you don't have it yet, follow the instructions via the [Amazon Web Service Help Center](https://aws.amazon.com/premiumsupport/knowledge-center/create-and-activate-aws-account/).
+Most of the AWS service used in this application is covered by the free-tier program, except the EMR service for Spark. All the instances will be deleted after the process. It shouldn't cost you more than 2 dollars a month.
+## Create an IAM User with programmatic access
+Follow the [instructions](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html#id_users_create_console) to create an IAM user. 
+In the 4th step, choose "programmatic access". And attach "Administrator Access" to the user when setting permissions. A more detailed instruction can be found [here](https://blog.ipswitch.com/how-to-create-an-ec2-instance-with-python).
+Upon completion, download **Access Key ID and Secret Access Key** and copy them to aws_credentials.cfg config file.
+**To prevent others from connecting your AWS resources. Don't expose aws_credential.cfg online.**
+
 
