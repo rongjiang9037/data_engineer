@@ -165,6 +165,7 @@ def create_ig(ec2):
             'ResourceType':'internet-gateway',
             'Tags':[{"Key": "Name", "Value": IG_NAME},
                    ]}])
+    print("===Internet gateway is reay!!")
     return ig
 
 def establish_connection(ec2_client, vpc, ig, subnet_pub):
@@ -179,7 +180,8 @@ def establish_connection(ec2_client, vpc, ig, subnet_pub):
     ig -- internet gateway object
     subnet_pub -- public subnet object
     """
-    ## 1.1 create a new route table for public subnet and
+    ## 1.1 create a new route table for public subnet
+    print("\n===Creating a new route table for public subnet allowing public traffic.")
     routetable = vpc.create_route_table(
         TagSpecifications=[
             {
@@ -197,9 +199,11 @@ def establish_connection(ec2_client, vpc, ig, subnet_pub):
     route = routetable.create_route(DestinationCidrBlock='0.0.0.0/0', GatewayId=ig.id)
     ## 1.3 attach the new route to the public subnet
     routetable.associate_with_subnet(SubnetId=subnet_pub.id)
+    print("===Route table is ready.")
     
     
     ## 2.1 get default security group id
+    print("\n===Config security group, allowing public traffic.")
     sg = ec2_client.describe_security_groups(Filters=[{'Name': 'vpc-id',
                                                         'Values': [vpc.vpc_id]}
                                                      ])
@@ -219,6 +223,7 @@ def establish_connection(ec2_client, vpc, ig, subnet_pub):
                                                 'ToPort': 22,
                                             },
                                         ],)
+    print("===Security group config is ready.")
     
     
 def create_ec2_with_eip(ec2, ec2_client, subnet_pub):
@@ -232,6 +237,7 @@ def create_ec2_with_eip(ec2, ec2_client, subnet_pub):
     
     """
     ## create EC2 instance
+    print("\n===Creating an EC2 instance")
     instances = ec2.create_instances(
          ImageId=AMI_ID,
          MinCount=1,
@@ -247,6 +253,14 @@ def create_ec2_with_eip(ec2, ec2_client, subnet_pub):
                 }]
      )
     
+    ## get instance ids
+    instances_ids = [i.instance_id for i in instances]
+
+    ## wait till instance is ready
+    waiter = ec2_client.get_waiter('instance_running')
+    waiter.wait(InstanceIds=instances_ids)
+    print("An EC2 instance is ready.")
+
     ## create new EIP and attach it to existing EC2 instance
     instance_id = instances[0].instance_id
     try:
@@ -256,7 +270,7 @@ def create_ec2_with_eip(ec2, ec2_client, subnet_pub):
         print(response)
     except ClientError as e:
         print(e)
-    print(f"\n===An EC2 instance has been created and assigned a EIP {allocation['PublicIp']}!")
+    print(f"===EIP {allocation['PublicIp']} has been assigned to the EC2 instance!")
     return instances
 
 
@@ -295,14 +309,14 @@ if __name__ == '__main__':
     
     ## create internet gateway
     ig = create_ig(ec2)
-    
     ## attach the internet gateway to the VPC
     vpc.attach_internet_gateway(InternetGatewayId = ig.id)
-    print("\n===Internet Gateway is ready!")
+    print("Attached the internet gateway to the VPC.")
     
     ## set up SSH connection from outside of VPC
-    instances = establish_connection(ec2_client, vpc, ig, subnet_pub)
-    print("EC instance is ready!")
+    establish_connection(ec2_client, vpc, ig, subnet_pub)
+    instances = create_ec2_with_eip(ec2, ec2_client, subnet_pub)
+    print("\n===EC instance is ready!")
     
     
     
