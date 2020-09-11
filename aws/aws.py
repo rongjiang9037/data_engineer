@@ -30,7 +30,8 @@ SUBNET1_REGION         = config_instance.get('VPC', 'SUBNET1_REGION')
 SUBNET2_NAME           = config_instance.get('VPC', 'SUBNET2_NAME')
 SUBNET2_CIDR_BLOCK     = config_instance.get('VPC', 'SUBNET2_CIDR_BLOCK')
 SUBNET2_REGION         = config_instance.get('VPC', 'SUBNET2_REGION')
-
+RT_NAME                = config_instance.get('ROUTE_TABLE', 'NAME')
+IG_NAME                = config_instance.get('IG', 'NAME')
 
 def get_keypair(ec2):
     """
@@ -160,7 +161,10 @@ def create_ig(ec2):
     """
     ## create internet gateway
     print("\n===Creating Internet Gateway...")
-    ig = ec2.create_internet_gateway()
+    ig = ec2.create_internet_gateway(TagSpecifications=[{
+            'ResourceType':'internet-gateway',
+            'Tags':[{"Key": "Name", "Value": IG_NAME},
+                   ]}])
     return ig
 
 def establish_connection(ec2_client, vpc, ig, subnet_pub):
@@ -266,7 +270,7 @@ if __name__ == '__main__':
     ## create a ec2 resource instance
     ec2 = boto3.resource('ec2', 
                         region_name = EC2_REGION,
-                        aws_access_key_id s= KEY,
+                        aws_access_key_id = KEY,
                         aws_secret_access_key = SECRET)
     
     ## create a ec2 client instnace
@@ -298,6 +302,7 @@ if __name__ == '__main__':
     
     ## set up SSH connection from outside of VPC
     instances = establish_connection(ec2_client, vpc, ig, subnet_pub)
+    print("EC instance is ready!")
     
     
     
