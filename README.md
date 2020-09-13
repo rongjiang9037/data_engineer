@@ -28,5 +28,19 @@ Follow the [instructions](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_us
 In the 4th step, choose "programmatic access". And attach **"Administrator Access"** and **"AmazonEC2RoleforSSM"** to the user when setting permissions. A more detailed instruction can be found [here](https://blog.ipswitch.com/how-to-create-an-ec2-instance-with-python).
 Upon completion, download **Access Key ID and Secret Access Key** and copy them to aws_credentials.cfg config file.
 **To prevent others from connecting your AWS resources. Don't expose aws_credential.cfg online.**
+## Run the following command in your local terminal
+```
+git clone https://github.com/rongjiang9037/data_engineer.git
+cd data_enginner/aws
+python aws.py
+```
+The console will have output:
+```
+===EC instance is ready!
+ssh -i ec2-key.pem ec2-user@**.**.**.**
+```
+Use `ssh -i ec2-key.pem ec2-user@**.**.**.**` command to connect the new EC2 instance from your local computer.
 
+## Set up apache airflow at the EC2 instance
+After log in into the EC2 instance, follow [here](https://medium.com/@christo.lagali/getting-airflow-up-and-running-on-an-ec2-instance-ae4f3a69441) to set up Apache Airflow installation.
 
