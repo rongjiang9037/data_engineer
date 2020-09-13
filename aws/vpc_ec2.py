@@ -222,6 +222,17 @@ def establish_connection(ec2_client, vpc, ig, subnet_pub):
                                                 ],
                                                 'ToPort': 22,
                                             },
+                                            {
+                                            'FromPort': 8080,
+                                            'IpProtocol': 'tcp',
+                                            'IpRanges': [
+                                                {
+                                                    'CidrIp': '0.0.0.0/0',
+                                                    'Description': 'Apache Airflow',
+                                                },
+                                            ],
+                                            'ToPort': 8080,
+                                        }
                                         ],)
     print("===Security group config is ready.")
     

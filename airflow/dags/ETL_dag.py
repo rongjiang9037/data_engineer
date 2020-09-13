@@ -32,6 +32,7 @@ def set_variables():
 def create_emr():
     st = time.time()
     cluster_id = emr_lib.create_emr_cluster()
+    Variable.set('cluster_id', cluster_id)
     logging.info(f'Successfully created EMR cluster {cluster_id}')
     logging.info(f'====Used{(time.time() - st)/60:5.2f}min')
 
