@@ -1,5 +1,7 @@
 import boto3
-import configparser
+import json
+import requests
+import time
 
 from airflow.models import Variable
 
@@ -31,6 +33,7 @@ def create_emr_cluster():
 
     ## get public subnet ID
     ec2_client = boto3.client('ec2',
+                     region_name=EMR_REGION,
                      aws_access_key_id=AWS_KEY,
                      aws_secret_access_key= AWS_SECRET)
 
@@ -115,3 +118,63 @@ def terminate_emr_cluster():
         ClusterId=cluster_id,
     )
     return cluster_id
+
+def get_master_dns(cluster_id):
+    """
+    This function get muster node's public DNS.
+
+    :param cluster_id:
+    :return:
+    """
+    ## get variables
+    EMR_REGION = Variable.get('EMR_REGION')
+    AWS_KEY = Variable.get('AWS_KEY')
+    AWS_SECRET = Variable.get('AWS_SECRET')
+    ## get EMR client object
+    emr_client = boto3.client('emr',
+                         region_name=EMR_REGION,
+                         aws_access_key_id=AWS_KEY,
+                         aws_secret_access_key= AWS_SECRET)
+
+    response = emr_client.describe_cluster(ClusterId=cluster_id)
+    return response['Cluster']['MasterPublicDnsName']
+
+def create_spark_session(cluster_dns):
+    """
+    This function create a spark session on EMR master node.
+    :param cluster_dns:
+    :return:
+    """
+    ## parameters to start session
+    host = 'http://{}:8998'.format(cluster_dns)
+    data  = {'kind': 'pyspark'}
+    headers = {'Content-Type': 'application/json'}
+
+    ## start session
+    r = requests.post(host+'/sessions', data=json.dumps(data), headers=headers)
+    session_url = host + r.headers['location']
+
+    ## wait till session is ready
+    while r['state'] != 'idle':
+        r = requests.get(session_url, headers=headers)
+        time.sleep(5)
+    return session_url
+
+def submit_statement(session_url, code_path, params_key):
+    """
+    This function submit statement to EMR spark session via Livy.
+
+    :param session_url: idle session url
+    :param code_path:
+    :return:
+    """
+    ## get code
+    with open(code_path, 'r') as f:
+        codes = f.readlines()
+    codes = ''.join(codes)
+
+    ## get params
+    data = {"code": codes.format(**params_key)}
+
+
+
