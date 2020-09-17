@@ -85,8 +85,8 @@ def time_table_etl(df_i94, time_output_path):
 
 ## ETL statements
 
-i94_path = "s3a://{{S3_BUCKET_NAME}}/{{I94_INPUT_FILE_KEY}}"
-time_output_path = "s3a://{{S3_BUCKET_NAME}}/{{TIME_OUTPUT_FILE_KEY}}"
+i94_path = "s3a://{S3_BUCKET_NAME}/{I94_INPUT_FILE_KEY}"
+time_output_path = "s3a://{S3_BUCKET_NAME}/{TIME_OUTPUT_FILE_KEY}"
 
 df_i94 = read_i94(i94_path)
 

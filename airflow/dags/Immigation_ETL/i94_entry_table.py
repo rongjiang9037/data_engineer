@@ -113,13 +113,13 @@ def i94_table_etl(df_i94, i94_output_path):
     print(' Writing time data to S3.')
     st = time.time()
     # write i94 table to parquet files partitioned by year and month
-    df_i94.write.partitionBy("i94yr", 'i94mon').parquet(i94_output_path)
+    df_i94.write.partitionBy("i94yr", 'i94mon').parquet(i94_output_path, "overwrite")
     print("======== i94 table load Done in {{:5.2}}min.".format((time.time()- st)/60))
 
 
 ## ETL statements
-i94_path = "s3a://{{S3_BUCKET_NAME}}/{{I94_INPUT_FILE_KEY}}"
-i94_output_path = "s3a://{{S3_BUCKET_NAME}}/{OUTPUT_I94_FILE_KEY}"
+i94_path = "s3a://{S3_BUCKET_NAME}/{I94_INPUT_FILE_KEY}"
+i94_output_path = "s3a://{S3_BUCKET_NAME}/{OUTPUT_I94_FILE_KEY}"
 
 df_i94 = read_i94(i94_path)
 
