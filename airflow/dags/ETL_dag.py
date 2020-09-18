@@ -24,7 +24,7 @@ Variable.set("EMR_TYPE", "m5.xlarge")
 Variable.set("MASTER_COUNT", 1)
 Variable.set("WORKER_COUNT", 2)
 Variable.set("I94_INPUT_FILE_KEY", "data/immigration_data_sample.csv")
-
+Variable.set("VPC_NAME", "IMMIGRATE_DEMOGRAPHICS_VPC")
 
 def create_emr():
     st = time.time()
@@ -53,7 +53,7 @@ def submit_to_emr(**kwargs):
     cluster_dns = emr_lib.get_master_dns(cluster_id)
 
     # create a spark session and return the session url
-    session_url = emr_lib.create_spark_session(cluster_dns, "pyspark")
+    session_url = emr_lib.create_spark_session(cluster_dns)
     print(f"=== Spark session created. Used {(time.time() - st)/60:5.2f}min.")
 
     # submit statements to EMR
@@ -113,6 +113,7 @@ process_i94_task = PythonOperator(
                 "I94_OUTPUT_FILE_KEY": "i94_table.parquet"
             }
     },
+    provide_context=True,
     dag=dag
 )
 
@@ -129,12 +130,13 @@ process_time_task = PythonOperator(
                 "TIME_OUTPUT_FILE_KEY": "time_table.parquet"
             }
     },
+    provide_context=True,
     dag=dag
 )
 
 check_i94_data_task = PythonOperator(
     task_id = "check_i94_data",
-    pythoncallable=submit_to_emr,
+    python_callable=submit_to_emr,
     params={
         "file":"/home/ec2-user/airflow/dags/Immigation_ETL/i94_data_quality.py",
         "job_name":"check data quality for i94 data",
@@ -143,12 +145,13 @@ check_i94_data_task = PythonOperator(
                 "I94_OUTPUT_FILE_KEY": "i94_table.parquet"
         }
     },
+    provide_context=True,
     dag=dag
 )
 
 check_time_data_task = PythonOperator(
     task_id = "check_time_data",
-    pythoncallable=submit_to_emr,
+    python_callable=submit_to_emr,
     params={
         "file":"/home/ec2-user/airflow/dags/Immigation_ETL/time_data_quality.py",
         "job_name":"check data quality for time data",
@@ -157,6 +160,7 @@ check_time_data_task = PythonOperator(
                 "TIME_OUTPUT_FILE_KEY": "time_table.parquet"
         }
     },
+    provide_context=True,
     dag=dag
 )
 
