@@ -8,7 +8,92 @@ from airflow.models import Variable
 from airflow import AirflowException
 
 
-def open_livy_port_to_airflow(ec2_client, VPC_NAME):
+def get_emr_sg_id(ec2_client, VPC_NAME):
+    """
+    This function retrieves security group id of the EMR master node.
+
+    :param ec2_client: ec2 client object
+    :param VPC_NAME: VPC name
+    :return:
+    """
+    ## 1. get VPC id
+    vpc = ec2_client.describe_vpcs(Filters=[{"Name": "tag:Name",
+                                      "Values":[VPC_NAME]}])
+    vpc_id = vpc["Vpcs"][0]["VpcId"]
+
+    ## 2. get security group ids from this VPC
+    sg = ec2_client.describe_security_groups(Filters=[{"Name": "vpc-id",
+                                                    "Values": vpc_id}
+                                                 ])
+
+    ## 3. loop over all sg and get security group id for the default and EMR master node
+    for sg_ in sg["SecurityGroups"]:
+        if sg_["GroupName"] == "ElasticMapReduce-master":
+            emr_sg = sg_
+    return emr_sg
+
+def get_ec2_public_ip(ec2_client):
+    """
+    This function get public ip address of a EC2 instance.
+    :param ec2_client: ec2 client object
+    :return: ip add
+    """
+    ## get EC2_NAME
+    EC2_NAME = Variable.get("EC2_NAME")
+    ec2_response = ec2_client.describe_instances(Filters=[{"Name": "tag:Name",
+                                      "Values":[EC2_NAME]}])
+    try:
+        ec2_public_ip = ec2_response["Reservations"][0]["Instances"][0]["NetworkInterfaces"][0]["Association"]["PublicIp"]
+    except Exception as e:
+        logging.info(e)
+        raise AirflowException("EC2 instnce {} haven't created yet.".format(EC2_NAME))
+    return ec2_public_ip
+
+
+def check_access_status(emr_sg, ec2_public_ip):
+    """
+    This function check if airflow server has access to EMR master node.
+
+    :param emr_sg: EMR master node security group
+    :param ec2_public_ip: public ip of the EC2 instance
+    :return:
+    """
+
+    already_have_access = False
+    for permission_sg in emr_sg["IpPermissions"]:
+        if permission_sg["FromPort"] == 8998 and permission_sg["ToPort"] == 8998:
+            cidrip = permission_sg["IpRanges"][0]["CidrIp"]
+            if cidrip == ec2_public_ip + "/32":
+                already_have_access = True
+                break
+    return already_have_access
+
+def add_access(ec2_client, emr_sg_id, ec2_public_ip):
+    """
+    This function add inbound rule to EMR sg, opeing port 8998 to EC2 public ip
+
+    :param ec2_client: EC2 client object
+    :param emr_sg_id: EMR master node security group ID
+    :param ec2_public_ip: public ip of the EC2 instance
+    :return:
+    """
+    ec2_client.authorize_security_group_ingress(GroupId = emr_sg_id,
+                                        IpPermissions=[
+                                        {
+                                            "FromPort": 8998,
+                                            "IpProtocol": "tcp",
+                                            "IpRanges": [
+                                                {
+                                                    "CidrIp": ec2_public_ip + "/32",
+                                                },
+                                            ],
+                                            "ToPort": 8998,
+                                        }
+                                    ],)
+
+
+
+def open_livy_port_to_airflow(ec2_client):
     """
     This function add security rule to master"s node.
     When a new EMR cluster is created, the master node is not configured to be accessed from
@@ -22,56 +107,21 @@ def open_livy_port_to_airflow(ec2_client, VPC_NAME):
     :param VPC_NAME: the name of the VPC object
     :return:
     """
-    ## get variables
-    EC2_NAME = Variable.get("EC2_NAME")
+    VPC_NAME = Variable.get("VPC_NAME")
 
-    ## 1. get VPC id
-    vpc = ec2_client.describe_vpcs(Filters=[{"Name": "tag:Name",
-                                      "Values":[VPC_NAME]}])
-    vpc_id = vpc["Vpcs"][0]["VpcId"]
-    ## 2. get security group ids from this VPC
-    sg = ec2_client.describe_security_groups(Filters=[{"Name": "vpc-id",
-                                                    "Values": [vpc["Vpcs"][0]["VpcId"]]}
-                                                 ])
-    ## 3. get security group id for the default and EMR master node
-    for sg_ in sg["SecurityGroups"]:
-        if sg_["GroupName"] == "ElasticMapReduce-master":
-            emr_sg = sg_
-    emr_sg_id = emr_sg["GroupId"]
+    ## get security id of a the EMR master node
+    emr_sg = get_emr_sg_id(ec2_client, VPC_NAME)
+    emr_sg_id = emr_sg['GroupId']
 
-    ## 4. check if the 8998 is already open to the instance
-    ## 4.1 get EC2 public IP
-    ec2_response = ec2_client.describe_instances(Filters=[{"Name": "tag:Name",
-                                      "Values":[EC2_NAME]}])
-    try:
-        ec2_public_ip = ec2_response["Reservations"][0]["Instances"][0]["NetworkInterfaces"][0]["Association"]["PublicIp"]
-    except Exception as e:
-        logging.info(e)
-        raise AirflowException("EC2 instnce {} haven't created yet.".format(EC2_NAME))
+    ## get ec2 public ip
+    ec2_public_ip = get_ec2_public_ip(ec2_client)
 
-    already_have_access = False
-    for permission_sg in emr_sg["IpPermissions"]:
-        if permission_sg["FromPort"] == 8998 and permission_sg["ToPort"] == 8998:
-            cidrip = permission_sg["IpRanges"][0]["CidrIp"]
-            if cidrip == ec2_public_ip + "/32":
-                already_have_access = True
-                break
+    ## check access status
+    already_have_access = check_access_status(emr_sg, ec2_public_ip)
+
 
     if not already_have_access:
-        ## 4. edit security group
-        ec2_client.authorize_security_group_ingress(GroupId = emr_sg_id,
-                                            IpPermissions=[
-                                            {
-                                                "FromPort": 8998,
-                                                "IpProtocol": "tcp",
-                                                "IpRanges": [
-                                                    {
-                                                        "CidrIp": ec2_public_ip + "/32",
-                                                    },
-                                                ],
-                                                "ToPort": 8998,
-                                            }
-                                        ],)
+        add_access(ec2_client, emr_sg_id, ec2_public_ip)
 
 
 
@@ -92,7 +142,6 @@ def create_emr_cluster():
     EMR_TYPE = Variable.get("EMR_TYPE")
     MASTER_COUNT = int(Variable.get("MASTER_COUNT"))
     WORKER_COUNT = int(Variable.get("WORKER_COUNT"))
-    VPC_NAME = Variable.get("VPC_NAME")
 
     ## create EMR client object
     emr_client = boto3.client("emr",
@@ -149,9 +198,29 @@ def create_emr_cluster():
 
     ## edit EMR"s security group to allow access from the EC2 instance
     ## that runs the airflow
-    open_livy_port_to_airflow(ec2_client, VPC_NAME)
+    open_livy_port_to_airflow(ec2_client)
 
     return cluster_id["JobFlowId"]
+
+def get_emr_cluster_id(emr_client):
+    """
+    This function get EMR cluster id.
+
+    :param emr_client: EMR client object
+    :return:
+    """
+    EMR_NAME = Variable.get("EMR_NAME")
+    ## get all running & waiting clusters
+    clusters_reponse = emr_client.list_clusters(
+    ClusterStates=["RUNNING", "WAITING"])
+
+    ## loop over clusters
+    for cluster in clusters_reponse["Clusters"]:
+        if cluster["Name"] == EMR_NAME:
+            cluster_id = cluster["Id"]
+            break
+    return cluster_id
+
 
 
 def terminate_emr_cluster():
@@ -164,7 +233,6 @@ def terminate_emr_cluster():
     EMR_REGION = Variable.get("EMR_REGION")
     AWS_KEY = Variable.get("AWS_KEY")
     AWS_SECRET = Variable.get("AWS_SECRET")
-    EMR_NAME = Variable.get("EMR_NAME")
 
     ## create EMR client object
     emr_client = boto3.client("emr",
@@ -172,20 +240,13 @@ def terminate_emr_cluster():
                              aws_access_key_id= AWS_KEY,
                              aws_secret_access_key= AWS_SECRET)
 
-    ## get all running & waiting clusters
-    clusters_reponse = emr_client.list_clusters(
-    ClusterStates=["RUNNING", "WAITING"])
-
-    ## loop over clusters
-    for cluster in clusters_reponse["Clusters"]:
-        if cluster["Name"] == EMR_NAME:
-            cluster_id = cluster["Id"]
-            break
+    cluster_id = get_emr_cluster_id(emr_client)
 
     ## terminate job flow
     emr_client.terminate_job_flows(
         JobFlowIds=[cluster_id]
     )
+
     ## wait till job flow terminated
     waiter = emr_client.get_waiter("cluster_terminated")
     waiter.wait(
@@ -229,7 +290,7 @@ def create_spark_session(cluster_dns):
     session_url = host + r.headers["location"]
 
     ## wait till session is ready
-    while r["state"] != "idle":
+    while r.json()["state"] != "idle":
         r = requests.get(session_url, headers=headers)
         time.sleep(5)
     return session_url
