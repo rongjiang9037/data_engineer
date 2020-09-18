@@ -37,20 +37,32 @@ def open_livy_port_to_airflow(ec2_client, VPC_NAME):
             emr_sg = sg_
     default_sg_id = default_sg['GroupId']
     emr_sg_id = emr_sg['GroupId']
-    ## 4. edit security group
-    ec2_client.authorize_security_group_ingress(GroupId = emr_sg_id,
-                                        IpPermissions=[
-                                        {
-                                            'FromPort': 8998,
-                                            'IpProtocol': 'tcp',
-                                            'UserIdGroupPairs': [
-                                                {
-                                                    'GroupId': default_sg_id,
-                                                },
-                                            ],
-                                            'ToPort': 8998,
-                                        }
-                                    ],)
+
+    ## 4. check if the 8998 is already open to the instance
+    already_have_access = False
+    for permission_sg in emr_sg:
+        if permission_sg['FromPort'] == 8998 and permission_sg['ToPort'] == 8998:
+            user_group_pairs = permission_sg['UserIdGroupPairs']
+            user_group_pairs = set([x['GroupId'] for x in user_group_pairs])
+            if emr_sg_id in user_group_pairs:
+                already_have_access = True
+                break
+
+    if not already_have_access:
+        ## 4. edit security group
+        ec2_client.authorize_security_group_ingress(GroupId = emr_sg_id,
+                                            IpPermissions=[
+                                            {
+                                                'FromPort': 8998,
+                                                'IpProtocol': 'tcp',
+                                                'UserIdGroupPairs': [
+                                                    {
+                                                        'GroupId': default_sg_id,
+                                                    },
+                                                ],
+                                                'ToPort': 8998,
+                                            }
+                                        ],)
 
 
 
