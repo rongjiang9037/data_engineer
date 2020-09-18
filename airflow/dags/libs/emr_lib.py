@@ -5,11 +5,12 @@ import time
 import logging
 
 from airflow.models import Variable
+from airflow import AirflowException
 
 
 def open_livy_port_to_airflow(ec2_client, VPC_NAME):
     """
-    This function add security rule to master's node.
+    This function add security rule to master"s node.
     When a new EMR cluster is created, the master node is not configured to be accessed from
     outside of the cluster.
     If the EC2 instance that runs airflow server needs to access it,
@@ -21,30 +22,38 @@ def open_livy_port_to_airflow(ec2_client, VPC_NAME):
     :param VPC_NAME: the name of the VPC object
     :return:
     """
+    ## get variables
+    EC2_NAME = Variable.get("EC2_NAME")
+
     ## 1. get VPC id
-    vpc = ec2_client.describe_vpcs(Filters=[{'Name': 'tag:Name',
-                                      'Values':[VPC_NAME]}])
-    vpc_id = vpc['Vpcs'][0]['VpcId']
+    vpc = ec2_client.describe_vpcs(Filters=[{"Name": "tag:Name",
+                                      "Values":[VPC_NAME]}])
+    vpc_id = vpc["Vpcs"][0]["VpcId"]
     ## 2. get security group ids from this VPC
-    sg = ec2_client.describe_security_groups(Filters=[{'Name': 'vpc-id',
-                                                    'Values': [vpc['Vpcs'][0]['VpcId']]}
+    sg = ec2_client.describe_security_groups(Filters=[{"Name": "vpc-id",
+                                                    "Values": [vpc["Vpcs"][0]["VpcId"]]}
                                                  ])
     ## 3. get security group id for the default and EMR master node
-    for sg_ in sg['SecurityGroups']:
-        if sg_['GroupName'] == 'default':
-            default_sg = sg_
-        if sg_['GroupName'] == 'ElasticMapReduce-master':
+    for sg_ in sg["SecurityGroups"]:
+        if sg_["GroupName"] == "ElasticMapReduce-master":
             emr_sg = sg_
-    default_sg_id = default_sg['GroupId']
-    emr_sg_id = emr_sg['GroupId']
+    emr_sg_id = emr_sg["GroupId"]
 
     ## 4. check if the 8998 is already open to the instance
+    ## 4.1 get EC2 public IP
+    ec2_response = ec2_client.describe_instances(Filters=[{"Name": "tag:Name",
+                                      "Values":[EC2_NAME]}])
+    try:
+        ec2_public_ip = ec2_response["Reservations"][0]["Instances"][0]["NetworkInterfaces"][0]["Association"]["PublicIp"]
+    except Exception as e:
+        logging.info(e)
+        raise AirflowException("EC2 instnce {} haven't created yet.".format(EC2_NAME))
+
     already_have_access = False
-    for permission_sg in emr_sg:
-        if permission_sg['FromPort'] == 8998 and permission_sg['ToPort'] == 8998:
-            user_group_pairs = permission_sg['UserIdGroupPairs']
-            user_group_pairs = set([x['GroupId'] for x in user_group_pairs])
-            if emr_sg_id in user_group_pairs:
+    for permission_sg in emr_sg["IpPermissions"]:
+        if permission_sg["FromPort"] == 8998 and permission_sg["ToPort"] == 8998:
+            cidrip = permission_sg["IpRanges"][0]["CidrIp"]
+            if cidrip == ec2_public_ip + "/32":
                 already_have_access = True
                 break
 
@@ -53,14 +62,14 @@ def open_livy_port_to_airflow(ec2_client, VPC_NAME):
         ec2_client.authorize_security_group_ingress(GroupId = emr_sg_id,
                                             IpPermissions=[
                                             {
-                                                'FromPort': 8998,
-                                                'IpProtocol': 'tcp',
-                                                'UserIdGroupPairs': [
+                                                "FromPort": 8998,
+                                                "IpProtocol": "tcp",
+                                                "IpRanges": [
                                                     {
-                                                        'GroupId': default_sg_id,
+                                                        "CidrIp": ec2_public_ip + "/32",
                                                     },
                                                 ],
-                                                'ToPort': 8998,
+                                                "ToPort": 8998,
                                             }
                                         ],)
 
@@ -138,7 +147,7 @@ def create_emr_cluster():
         ClusterId=cluster_id["JobFlowId"],
     )
 
-    ## edit EMR's security group to allow access from the EC2 instance
+    ## edit EMR"s security group to allow access from the EC2 instance
     ## that runs the airflow
     open_livy_port_to_airflow(ec2_client, VPC_NAME)
 

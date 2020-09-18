@@ -11,6 +11,8 @@ from airflow import AirflowException
 from libs import emr_lib
 
 ## SET variables
+## EC2
+Variable.set("EC2_NAME", "IMMIGRATE_DEMOGRAPHICS")
 ## VPC & SUBNET
 Variable.set("PUB_SUBNET_NAME", "IMMIGRATE_DEMOGRAPHICS_PUB")
 ## S3
@@ -80,7 +82,8 @@ def submit_to_emr(**kwargs):
 
 dag = DAG(
     "immigration_demographics_analysis",
-    start_date = datetime.datetime.now()
+    start_date = datetime.datetime.now(),
+    concurrency = 2
 )
 
 
