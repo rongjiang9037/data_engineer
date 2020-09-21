@@ -119,7 +119,6 @@ def open_livy_port_to_airflow(ec2_client):
     ## check access status
     already_have_access = check_access_status(emr_sg, ec2_public_ip)
 
-
     if not already_have_access:
         add_access(ec2_client, emr_sg_id, ec2_public_ip)
 
@@ -334,7 +333,7 @@ def track_statement_progress(statement_url):
     r = requests.get(statement_url, headers=headers)
 
     ## while till the run finishes
-    while r.json()["output"]["status"] == "running":
+    while r.json()["state"] == "running":
         time.sleep(3)
         r = requests.get(statement_url, headers=headers)
     return r.json()["output"]

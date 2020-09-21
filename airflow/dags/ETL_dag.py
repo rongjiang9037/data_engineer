@@ -62,10 +62,10 @@ def submit_to_emr(**kwargs):
     print("\n Submitting statements to EMR Spark cluster.")
     st = time.time()
     statement_url = emr_lib.submit_statement(session_url, cluster_dns, kwargs["params"]["file"], kwargs["params"]["key_words"])
-    print(f"=== Spark job finished. Used {(time.time() - st)/60:5.2f}min.")
-
     # get the run log
     run_log = emr_lib.track_statement_progress(statement_url)
+    print(f"=== Spark job finished. Used {(time.time() - st)/60:5.2f}min.")
+    
     if run_log["status"] == "ok":
         logging.info(run_log["data"]["text/plain"])
     if run_log["status"] == "error":
