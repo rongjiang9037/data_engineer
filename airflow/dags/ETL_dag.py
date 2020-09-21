@@ -65,7 +65,7 @@ def submit_to_emr(**kwargs):
     # get the run log
     run_log = emr_lib.track_statement_progress(statement_url)
     print(f"=== Spark job finished. Used {(time.time() - st)/60:5.2f}min.")
-    
+
     if run_log["status"] == "ok":
         logging.info(run_log["data"]["text/plain"])
     if run_log["status"] == "error":

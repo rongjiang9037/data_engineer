@@ -63,8 +63,8 @@ def check_access_status(emr_sg, ec2_public_ip):
     already_have_access = False
     for permission_sg in emr_sg["IpPermissions"]:
         if permission_sg["FromPort"] == 8998 and permission_sg["ToPort"] == 8998:
-            cidrip = permission_sg["IpRanges"][0]["CidrIp"]
-            if cidrip == ec2_public_ip + "/32":
+            cidrip_set = set([x['CidrIp'] for x in permission_sg["IpRanges"]])
+            if ec2_public_ip + "/32" in cidrip_set:
                 already_have_access = True
                 break
     return already_have_access
