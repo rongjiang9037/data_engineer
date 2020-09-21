@@ -8,7 +8,7 @@ from airflow.models import Variable
 from airflow import AirflowException
 
 
-def get_emr_sg_id(ec2_client, VPC_NAME):
+def get_emr_sg_id(ec2_client):
     """
     This function retrieves security group id of the EMR master node.
 
@@ -16,6 +16,7 @@ def get_emr_sg_id(ec2_client, VPC_NAME):
     :param VPC_NAME: VPC name
     :return:
     """
+    VPC_NAME = Variable.get("VPC_NAME")
     ## 1. get VPC id
     vpc = ec2_client.describe_vpcs(Filters=[{"Name": "tag:Name",
                                       "Values":[VPC_NAME]}])
@@ -23,7 +24,7 @@ def get_emr_sg_id(ec2_client, VPC_NAME):
 
     ## 2. get security group ids from this VPC
     sg = ec2_client.describe_security_groups(Filters=[{"Name": "vpc-id",
-                                                    "Values": vpc_id}
+                                                    "Values": [vpc_id]}
                                                  ])
 
     ## 3. loop over all sg and get security group id for the default and EMR master node
@@ -107,10 +108,9 @@ def open_livy_port_to_airflow(ec2_client):
     :param VPC_NAME: the name of the VPC object
     :return:
     """
-    VPC_NAME = Variable.get("VPC_NAME")
 
     ## get security id of a the EMR master node
-    emr_sg = get_emr_sg_id(ec2_client, VPC_NAME)
+    emr_sg = get_emr_sg_id(ec2_client)
     emr_sg_id = emr_sg['GroupId']
 
     ## get ec2 public ip
@@ -334,10 +334,10 @@ def track_statement_progress(statement_url):
     r = requests.get(statement_url, headers=headers)
 
     ## while till the run finishes
-    while r["output"]["status"] == "running":
+    while r.json()["output"]["status"] == "running":
         time.sleep(3)
         r = requests.get(statement_url, headers=headers)
-    return r["output"]
+    return r.json()["output"]
 
 
 def kill_spark_session(session_url):
