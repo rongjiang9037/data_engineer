@@ -333,7 +333,7 @@ def track_statement_progress(statement_url):
     r = requests.get(statement_url, headers=headers)
 
     ## while till the run finishes
-    while r.json()["state"] == "running":
+    while r.json()["progress"] != 1 or r.json()["state"] == "running":
         time.sleep(3)
         r = requests.get(statement_url, headers=headers)
     return r.json()["output"]
