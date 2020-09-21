@@ -8,13 +8,13 @@ def not_empty(df):
 
 def entry_yr_not_future(df):
     curr_yr = datetime.now().year
-    if df.agg({"i94yr":"max"}).collect()[0][0] <= curr_yr:
+    if df.agg({{"i94yr":"max"}}).collect()[0][0] <= curr_yr:
         return True
     else:
         return False
 
 ## read data from S3
-file_path = "s3a://{S3_BUCKET_NAME}/{OUTPUT_I94_FILE_KEY}"
+file_path = "s3a://{S3_BUCKET_NAME}/{I94_OUTPUT_FILE_KEY}"
 df = spark.read.load(file_path)
 
 no_empty_flag = not_empty(df)
