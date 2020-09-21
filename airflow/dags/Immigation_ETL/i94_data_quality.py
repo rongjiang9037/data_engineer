@@ -7,7 +7,7 @@ def not_empty(df):
         return False
 
 def entry_yr_not_future(df):
-    curr_yr = datetime.now().year
+    curr_yr = datetime.datetime.now().year
     if df.agg({{"i94yr":"max"}}).collect()[0][0] <= curr_yr:
         return True
     else:
