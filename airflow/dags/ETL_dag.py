@@ -2,6 +2,8 @@ import datetime
 import time
 import logging
 
+import pandas as pd
+
 from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
 from airflow.operators.dummy_operator import DummyOperator
@@ -9,6 +11,8 @@ from airflow.models import Variable
 from airflow import AirflowException
 
 from libs import emr_lib
+from Immigation_ETL import port_table as port_lib
+from Immigation_ETL import port_data_quality as port_quality
 
 ## SET variables
 ## EC2
@@ -48,7 +52,7 @@ def submit_to_emr(**kwargs):
     :param kwargs:
     :return:
     """
-    print("\n Preparing to submit job to {}".format(kwargs["params"]["job_name"]))
+    logging.info("\n Preparing to submit job to {}".format(kwargs["params"]["job_name"]))
     st = time.time()
     cluster_id = Variable.get("cluster_id")
     # get master node DNS
@@ -56,15 +60,15 @@ def submit_to_emr(**kwargs):
 
     # create a spark session and return the session url
     session_url = emr_lib.create_spark_session(cluster_dns)
-    print(f"=== Spark session created. Used {(time.time() - st)/60:5.2f}min.")
+    logging.info(f"=== Spark session created. Used {(time.time() - st)/60:5.2f}min.")
 
     # submit statements to EMR
-    print("\n Submitting statements to EMR Spark cluster.")
+    logging.info("\n Submitting statements to EMR Spark cluster.")
     st = time.time()
     statement_url = emr_lib.submit_statement(session_url, cluster_dns, kwargs["params"]["file"], kwargs["params"]["key_words"])
     # get the run log
     run_log = emr_lib.track_statement_progress(statement_url)
-    print(f"=== Spark job finished. Used {(time.time() - st)/60:5.2f}min.")
+    logging.info(f"=== Spark job finished. Used {(time.time() - st)/60:5.2f}min.")
 
     if run_log["status"] == "ok":
         logging.info(run_log["data"]["text/plain"])
@@ -75,8 +79,48 @@ def submit_to_emr(**kwargs):
         raise AirflowException("+++ Error Occurred while processing data +++")
 
     emr_lib.kill_spark_session(session_url)
-    print("=== Spark session closed.")
+    logging.info("=== Spark session closed.")
 
+
+def process_port_data(**kwargs):
+    """
+    This function process port table.
+    :param kwargs:
+    :return:
+    """
+    logging.info("\n Reading US states and port data.")
+    st = time.time()
+    ### read US state data
+    us_state_path = "s3a://{}/{}".format(kwargs["params"]["S3_BUCKET_NAME"], kwargs["params"]["US_STATE_PATH"])
+    df_states = pd.read_csv(us_state_path)
+
+    label_description_path = "s3a://{}/{}".format(kwargs["params"]["S3_BUCKET_NAME"], kwargs["params"]["LABEL_DESP_PATH"])
+    str_port = port_lib.get_port(label_description_path)
+    logging.info(f"=== Finished reading port data. Used {(time.time() - st)/60:5.2f}min.")
+
+    logging.info("\n Starting port table ETL process.")
+    st = time.time()
+    df_port = port_lib.port_etl(str_port, df_states)
+    logging.info(f"=== Finished processing port data. Used {(time.time() - st)/60:5.2f}min.")
+
+    output_path = "s3a://{}/{}".format(kwargs["params"]["S3_BUCKET_NAME"], kwargs["params"]["PORT_OUTPUT_FILE_KEY"])
+    df_port.to_csv(output_path)
+    logging.info("\n Port data has been saved to S3.")
+
+
+def check_port_data(**kwargs):
+    """
+    This function performs various data checks to port dataset.
+    :param kwargs:
+    :return:
+    """
+    ## check if data is empty
+    port_output_path = "s3a://{}/{}".format(kwargs["params"]["S3_BUCKET_NAME"], kwargs["params"]["PORT_OUTPUT_FILE_KEY"])
+    is_empty = port_quality.is_empty(port_output_path)
+    if is_empty:
+        raise AirflowException("Data check failed! Port table is empty!")
+    else:
+        logging.info("Port data check passed!")
 
 
 
@@ -138,14 +182,14 @@ process_time_task = PythonOperator(
 )
 
 check_i94_data_task = PythonOperator(
-    task_id = "check_i94_data",
+    task_id="check_i94_data",
     python_callable=submit_to_emr,
     params={
         "file":"/home/ec2-user/airflow/dags/Immigation_ETL/i94_data_quality.py",
         "job_name":"check data quality for i94 data",
         "key_words":{
                 "S3_BUCKET_NAME": Variable.get("S3_BUCKET_NAME"),
-                "I94_OUTPUT_FILE_KEY": "i94_table.parquet"
+                "I94_OUTPUT_FILE_KEY": "output/i94_table.parquet"
         }
     },
     provide_context=True,
@@ -153,28 +197,54 @@ check_i94_data_task = PythonOperator(
 )
 
 check_time_data_task = PythonOperator(
-    task_id = "check_time_data",
+    task_id="check_time_data",
     python_callable=submit_to_emr,
     params={
         "file":"/home/ec2-user/airflow/dags/Immigation_ETL/time_data_quality.py",
         "job_name":"check data quality for time data",
         "key_words":{
                 "S3_BUCKET_NAME": Variable.get("S3_BUCKET_NAME"),
-                "TIME_OUTPUT_FILE_KEY": "time_table.parquet"
+                "TIME_OUTPUT_FILE_KEY": "output/time_table.parquet"
         }
     },
     provide_context=True,
     dag=dag
 )
 
+process_port_data_task = PythonOperator(
+    task_id="process_port_data",
+    python_callable=process_port_data,
+    params={
+        "S3_BUCKET_NAME": Variable.get("S3_BUCKET_NAME"),
+        "US_STATE_PATH": "data/us_states.csv",
+        "LABEL_DESP_PATH":"data/I94_SAS_Labels_Descriptions.SAS",
+        "PORT_OUTPUT_FILE_KEY":"output/port_table.csv"
+    },
+    provide_context=True,
+    dag=dag
+)
+
+check_port_data_task = PythonOperator(
+    task_id="check_port_data",
+    python_callable=check_port_data,
+    params={
+        "S3_BUCKET_NAME": Variable.get("S3_BUCKET_NAME"),
+        "PORT_OUTPUT_FILE_KEY":"output/port_table.csv"
+    },
+    provide_context=True,
+    dag=dag
+)
 
 start_task >> create_emr_task
 
 create_emr_task >> process_i94_task
 create_emr_task >> process_time_task
+create_emr_task >> process_port_data_task
 process_i94_task >> check_i94_data_task
 process_time_task >> check_time_data_task
+process_port_data_task >> check_port_data_task
 
 
 check_i94_data_task >> remove_emr_task
 check_time_data_task >> remove_emr_task
+check_port_data_task >> remove_emr_task
