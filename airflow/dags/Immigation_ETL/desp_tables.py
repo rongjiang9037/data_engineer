@@ -2,13 +2,11 @@ import re
 import pandas as pd
 import numpy as np
 
-
-def get_port(label_description_path):
+def get_all_desp_str(label_description_path):
     """
-    This function gets port description data.
-
-    :param label_description_path: S3 path where the label description is stored
-    :return: data in string format
+    This function reads all de desp functions and return a long string.
+    :param label_description_path:
+    :return:
     """
     ## read port description data
     res = []
@@ -16,18 +14,29 @@ def get_port(label_description_path):
         for line in file_object:
             if len(line.strip()) > 0:
                 res.append(line.strip())
-
     i94_desp = ''.join(res).split(';')
+    return i94_desp
+
+
+def extract_data_from_desp(label_description_path, key_word):
+    """
+    This function gets port description data.
+
+    :param label_description_path: S3 path where the label description is stored
+    :param key_word: the key word used to extract corresponding data
+    :return: data in string format
+    """
+    i94_desp = get_all_desp_str(label_description_path)
+
     # process port description data
     for desp in i94_desp:
-        if 'I94PORT' in desp:
+        if key_word in desp:
             return desp
     return None
 
-
-def port_etl(desp, df_states):
+def process_port(desp, df_states):
     """
-    this function is the ETL for port table.
+    this function processes port table after extraction.
     :param desp: a string, contains all port description from label description sas file
     :param df_states: DataFrame format, contains US 50 states name and abbr
     :return:
@@ -92,5 +101,49 @@ def port_etl(desp, df_states):
     df_port['address'] = df_port['port_add'].apply(lambda x: get_address(x))
     df_port = df_port[['port_code', 'state', 'address']]
     df_port = df_port.rename(columns={'port_code': 'port_key'})
-    
+
     return df_port
+
+
+
+def process_country(str_country):
+    """
+    This function extracts country info.
+    :param str_country:
+    :return:
+    """
+    region_list = re.findall(re.compile("([0-9]+) {1,2}=  {1,2}\'([A-Za-z0-9 ,\(\)\.:\/-]+)\'"), str_country)
+    df_region = pd.DataFrame(region_list, columns=['region_key', 'region_name'])
+    return df_region
+
+def process_i94_mode(str_i94_mode):
+    """
+    This function extracts i94 mode info.
+    :param str_i94_mode:
+    :return:
+    """
+    i94mode_list= re.findall(re.compile("([1-9]) = \'([a-zA-Z ]+)\'"), str_i94_mode)
+    df_i94mode = pd.DataFrame(i94mode_list, columns=['i94mode_key', 'i94mode'])
+    return df_i94mode
+
+
+def process_state(str_state):
+    """
+    This function extracts state info.
+    :param str_state:
+    :return:
+    """
+    state_info_list = re.findall(re.compile("\'([A-Z9]{2})\'=\'([a-zA-Z \.]+)\'"), str_state)
+    df_state = pd.DataFrame(state_info_list, columns=['state_code', 'state'])
+    return df_state
+
+
+def process_i94_visa(visa_str):
+    """
+    This function extracts visa info.
+    :param visa_str:
+    :return:
+    """
+    visa_list = re.findall(re.compile("([1-3]) = ([A-Za-z]+)"), visa_str)
+    df_visa = pd.DataFrame(visa_list, columns=['visa_key', 'visa_broad_type'])
+    return df_visa

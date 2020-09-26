@@ -29,8 +29,12 @@ Variable.set("EMR_WORKER_NAME", "IMMIGRATE_DEMOGRAPHICS_WORKER")
 Variable.set("EMR_TYPE", "m5.xlarge")
 Variable.set("MASTER_COUNT", 1)
 Variable.set("WORKER_COUNT", 2)
-Variable.set("I94_INPUT_FILE_KEY", "data/immigration_data_sample.csv")
 Variable.set("VPC_NAME", "IMMIGRATE_DEMOGRAPHICS_VPC")
+## input / output file key
+Variable.set("I94_INPUT_FILE_KEY", "data/immigration_data_sample.csv")
+Variable.set("I94_OUTPUT_FILE_KEY", "output/i94_table.parquet")
+Variable.set("TIME_OUTPUT_FILE_KEY", "output/time_table.parquet")
+
 
 def create_emr():
     st = time.time()
@@ -125,7 +129,7 @@ def check_port_data(**kwargs):
 
 
 dag = DAG(
-    "immigration_demographics_analysis",
+    "immigration_demographics_analysis_emr_dag",
     start_date = datetime.datetime.now(),
     concurrency = 2
 )
@@ -157,7 +161,7 @@ process_i94_task = PythonOperator(
         "key_words":{
                 "S3_BUCKET_NAME": Variable.get("S3_BUCKET_NAME"),
                 "I94_INPUT_FILE_KEY": Variable.get("I94_INPUT_FILE_KEY"),
-                "I94_OUTPUT_FILE_KEY": "i94_table.parquet"
+                "I94_OUTPUT_FILE_KEY": Variable.get("I94_OUTPUT_FILE_KEY")
             }
     },
     provide_context=True,
@@ -174,7 +178,7 @@ process_time_task = PythonOperator(
         "key_words":{
                 "S3_BUCKET_NAME": Variable.get("S3_BUCKET_NAME"),
                 "I94_INPUT_FILE_KEY": Variable.get("I94_INPUT_FILE_KEY"),
-                "TIME_OUTPUT_FILE_KEY": "time_table.parquet"
+                "TIME_OUTPUT_FILE_KEY": Variable.get("TIME_OUTPUT_FILE_KEY")
             }
     },
     provide_context=True,
@@ -189,7 +193,7 @@ check_i94_data_task = PythonOperator(
         "job_name":"check data quality for i94 data",
         "key_words":{
                 "S3_BUCKET_NAME": Variable.get("S3_BUCKET_NAME"),
-                "I94_OUTPUT_FILE_KEY": "output/i94_table.parquet"
+                "I94_OUTPUT_FILE_KEY": Variable.get("I94_OUTPUT_FILE_KEY")
         }
     },
     provide_context=True,
@@ -204,47 +208,22 @@ check_time_data_task = PythonOperator(
         "job_name":"check data quality for time data",
         "key_words":{
                 "S3_BUCKET_NAME": Variable.get("S3_BUCKET_NAME"),
-                "TIME_OUTPUT_FILE_KEY": "output/time_table.parquet"
+                "TIME_OUTPUT_FILE_KEY":Variable.get("TIME_OUTPUT_FILE_KEY")
         }
     },
     provide_context=True,
     dag=dag
 )
 
-process_port_data_task = PythonOperator(
-    task_id="process_port_data",
-    python_callable=process_port_data,
-    params={
-        "S3_BUCKET_NAME": Variable.get("S3_BUCKET_NAME"),
-        "US_STATE_PATH": "data/us_states.csv",
-        "LABEL_DESP_PATH":"data/I94_SAS_Labels_Descriptions.SAS",
-        "PORT_OUTPUT_FILE_KEY":"output/port_table.csv"
-    },
-    provide_context=True,
-    dag=dag
-)
-
-check_port_data_task = PythonOperator(
-    task_id="check_port_data",
-    python_callable=check_port_data,
-    params={
-        "S3_BUCKET_NAME": Variable.get("S3_BUCKET_NAME"),
-        "PORT_OUTPUT_FILE_KEY":"output/port_table.csv"
-    },
-    provide_context=True,
-    dag=dag
-)
 
 start_task >> create_emr_task
 
 create_emr_task >> process_i94_task
 create_emr_task >> process_time_task
-create_emr_task >> process_port_data_task
 process_i94_task >> check_i94_data_task
 process_time_task >> check_time_data_task
-process_port_data_task >> check_port_data_task
 
 
 check_i94_data_task >> remove_emr_task
 check_time_data_task >> remove_emr_task
-check_port_data_task >> remove_emr_task
+
