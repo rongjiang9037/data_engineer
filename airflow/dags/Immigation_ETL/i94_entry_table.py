@@ -97,7 +97,7 @@ def i94_table_etl(df_i94, i94_output_path):
     df_i94 = df_i94.withColumn('arrival_date', to_date(from_unixtime(get_timestamp(col('arrival_date')))))
 
     get_timestamp = udf(lambda x: None if x is None else int(x*24*60*60)-315619200, IntegerType())
-    df_i94 = df_i94.withColumn('departure_date', get_timestamp(col("departure_date")))
+    df_i94 = df_i94.withColumn('departure_date', to_date(from_unixtime(get_timestamp(col("departure_date")))))
 
     str_to_date = udf(lambda x: datetime.strptime(x, "%Y%m%d"), DateType())
     df_i94 = df_i94.withColumn('i94_file_date', str_to_date(col("i94_file_date")))

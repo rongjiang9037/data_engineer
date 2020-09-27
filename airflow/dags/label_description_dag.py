@@ -10,7 +10,7 @@ from airflow.operators.dummy_operator import DummyOperator
 from airflow.models import Variable
 from airflow import AirflowException
 
-from Immigation_ETL import desp_tables as desp_tables
+from Immigation_ETL import desp_tables
 from Immigation_ETL import desp_tables_quality as desp_quality
 
 ## SET variables
@@ -27,6 +27,9 @@ Variable.set("CNTY_OUTPUT_FILE_KEY", "output/country_table.csv")
 Variable.set("I94_MODE_OUTPUT_FILE_KEY", "output/i94_mode_table.csv")
 Variable.set("STATE_OUTPUT_FILE_KEY", "output/state_table.csv")
 Variable.set("VISA_OUTPUT_FILE_KEY", "output/visa_table.csv")
+Variable.set("LABEL_DESP_STAGING_PATH", "output/label_desp_staging.csv")
+
+
 
 def port_etl(**kwargs):
     """
@@ -34,25 +37,33 @@ def port_etl(**kwargs):
     :param kwargs:
     :return:
     """
+    ## get parameters
+    s3_bucket_name = kwargs["params"]["S3_BUCKET_NAME"]
+    us_state_key = kwargs["params"]["US_STATE_PATH"]
+    label_desp_key_path = kwargs["params"]["LABEL_STAGING"]
+    table_name = kwargs["params"]["TABLE_NAME"]
+    port_output_key = kwargs["params"]["PORT_OUTPUT_FILE_KEY"]
+
     logging.info("\n Reading US states and port data.")
     st = time.time()
     ### read US state data
-    us_state_path = "s3a://{}/{}".format(kwargs["params"]["S3_BUCKET_NAME"], kwargs["params"]["US_STATE_PATH"])
+    us_state_path = "s3://{}/{}".format(s3_bucket_name, us_state_key)
     df_states = pd.read_csv(us_state_path)
 
     ## extract port data
-    label_description_path = "s3a://{}/{}".format(kwargs["params"]["S3_BUCKET_NAME"], kwargs["params"]["LABEL_DESP_PATH"])
-    str_port = desp_tables.extract_data_from_desp(label_description_path, "I94PORT")
+    us_port_path = "s3://{}/{}".format(s3_bucket_name, label_desp_key_path)
+    df_port = pd.read_csv(us_port_path)
+    df_port = df_port.loc[df_port['type'] == 'port']
     logging.info("=== Finished reading US states and port data. Used {:5.2f}min.".format((time.time() - st)/60))
 
     ## data process
-    logging.info("\n Starting process {} table.".format(kwargs["params"]["TABLE_NAME"]))
+    logging.info("\n Starting process {} table.".format(table_name))
     st = time.time()
-    df_port = desp_tables.process_port(str_port, df_states)
-    logging.info("=== Finished processing {} data. Used {:5.2f}min.".format(kwargs["params"]["TABLE_NAME"], (time.time() - st)/60))
+    df_port = desp_tables.process_port(df_port, df_states)
+    logging.info("=== Finished processing {} data. Used {:5.2f}min.".format(table_name, (time.time() - st)/60))
 
     ## save to S3
-    output_path = "s3a://{}/{}".format(kwargs["params"]["S3_BUCKET_NAME"], kwargs["params"]["PORT_OUTPUT_FILE_KEY"])
+    output_path = "s3a://{}/{}".format(s3_bucket_name, port_output_key)
     df_port.to_csv(output_path)
     logging.info("\n Port data has been saved to S3.")
 
@@ -65,57 +76,35 @@ def generic_etl(**kwargs):
     """
     ## get parameters
     ### data tables
-    data_key_word = kwargs["params"]["DATA_KWY_WORD"]
+    # data_key_word = kwargs["params"]["DATA_KWY_WORD"]
     table_name = kwargs["params"]["TABLE_NAME"]
     s3_bucket_name = kwargs["params"]["S3_BUCKET_NAME"]
     ### etl function name
     etl_func = kwargs["params"]["ETL_FUN"]
     ### input & output key path in S3
-    label_desp_key_path = kwargs["params"]["LABEL_DESP_PATH"]
+    label_desp_key_path = kwargs["params"]["LABEL_STAGING"]
     output_key_path = kwargs["params"]["OUTPUT_FILE_KEY"]
 
 
     ## read data
     logging.info("\n Reading {} data.".format(table_name))
     st = time.time()
-    label_description_path = "s3a://{}/{}".format(s3_bucket_name, label_desp_key_path)
-    str_country = desp_tables.extract_data_from_desp(label_description_path, data_key_word)
+    label_stating_path = "s3a://{}/{}".format(s3_bucket_name, label_desp_key_path)
+    df = pd.read_csv(label_stating_path)
+    df = df.loc[df['type'] == table_name]
     logging.info("=== Finished reading {} data. Used {:5.2f}min.".format(table_name, (time.time() - st)/60))
 
     ## data process
     logging.info("\n Starting {} table ETL process.".format(table_name))
     st = time.time()
-    df_port = etl_func(str_country)
+    df = etl_func(df)
     logging.info("=== Finished processing {} data. Used {:5.2f}min.".format(table_name, (time.time() - st)/60))
 
     ## save to S3
-    output_path = "s3a://{}/{}".format(s3_bucket_name, output_key_path)
-    df_port.to_csv(output_path)
-    logging.info("\n {} data has been saved to S3.".format(kwargs["params"]["TABLE_NAME"]))
+    output_path = "s3://{}/{}".format(s3_bucket_name, output_key_path)
+    df.to_csv(output_path)
+    logging.info("\n {} data has been saved to S3.".format(table_name))
 
-
-def state_etl(**kwargs):
-    """
-    This function process state table.
-    :param kwargs:
-    :return:
-    """
-    logging.info("\n Reading state data.")
-    st = time.time()
-    label_description_path = "s3a://{}/{}".format(kwargs["params"]["S3_BUCKET_NAME"], kwargs["params"]["LABEL_DESP_PATH"])
-    str_country = desp_tables.extract_data_from_desp(label_description_path, "I94ADDR")
-    logging.info("=== Finished reading {} data. Used {:5.2f}min.".format(kwargs["params"]["TABLE_NAME"], (time.time() - st)/60))
-
-    ## data process
-    logging.info("\n Starting {} table ETL process.".format(kwargs["params"]["TABLE_NAME"]))
-    st = time.time()
-    df_port = desp_tables.process_country(str_country)
-    logging.info("=== Finished processing {} data. Used {:5.2f}min.".format(kwargs["params"]["TABLE_NAME"], (time.time() - st)/60))
-
-    ## save to S3
-    output_path = "s3a://{}/{}".format(kwargs["params"]["S3_BUCKET_NAME"], kwargs["params"]["CNTY_OUTPUT_FILE_KEY"])
-    df_port.to_csv(output_path)
-    logging.info("\n {} data has been saved to S3.".format(kwargs["params"]["TABLE_NAME"]))
 
 
 def data_check(**kwargs):
@@ -157,6 +146,17 @@ end_task = DummyOperator(
     dag=dag
 )
 
+extract_data_from_label_desp = PythonOperator(
+    task_id="extract_label_desp_data",
+    python_callable=desp_tables.extract_label_desp_data,
+    params={
+        "S3_BUCKET_NAME": Variable.get("S3_BUCKET_NAME"),
+        "LABEL_DESP_PATH": Variable.get("LABEL_DESP_PATH"),
+        "LABEL_DESP_STAGING_PATH": Variable.get("LABEL_DESP_STAGING_PATH")
+    },
+    provide_context=True,
+    dag=dag
+)
 
 process_port_data_task = PythonOperator(
     task_id="process_port_data",
@@ -164,7 +164,7 @@ process_port_data_task = PythonOperator(
     params={
         "S3_BUCKET_NAME": Variable.get("S3_BUCKET_NAME"),
         "US_STATE_PATH": Variable.get("US_STATE_PATH"),
-        "LABEL_DESP_PATH": Variable.get("LABEL_DESP_PATH"),
+        "LABEL_STAGING": Variable.get("LABEL_DESP_STAGING_PATH"),
         "PORT_OUTPUT_FILE_KEY": Variable.get("PORT_OUTPUT_FILE_KEY"),
         "TABLE_NAME":"port"
     },
@@ -177,9 +177,9 @@ process_country_data_task = PythonOperator(
     python_callable=generic_etl,
     params={
         "S3_BUCKET_NAME": Variable.get("S3_BUCKET_NAME"),
-        "LABEL_DESP_PATH": Variable.get("LABEL_DESP_PATH"),
+        "LABEL_STAGING": Variable.get("LABEL_DESP_STAGING_PATH"),
         "OUTPUT_FILE_KEY": Variable.get("CNTY_OUTPUT_FILE_KEY"),
-        "DATA_KWY_WORD": "I94CIT & I94RES",
+        # "DATA_KWY_WORD": "I94CIT & I94RES",
         "TABLE_NAME":"country",
         "ETL_FUN":desp_tables.process_country
     },
@@ -192,10 +192,10 @@ process_i94_mode_task = PythonOperator(
     python_callable=generic_etl,
     params={
         "S3_BUCKET_NAME": Variable.get("S3_BUCKET_NAME"),
-        "LABEL_DESP_PATH": Variable.get("LABEL_DESP_PATH"),
+        "LABEL_STAGING": Variable.get("LABEL_DESP_STAGING_PATH"),
         "OUTPUT_FILE_KEY": Variable.get("I94_MODE_OUTPUT_FILE_KEY"),
-        "DATA_KWY_WORD": "I94MODE",
-        "TABLE_NAME":"i94 mode",
+        # "DATA_KWY_WORD": "I94MODE",
+        "TABLE_NAME":"i94_mode",
         "ETL_FUN":desp_tables.process_i94_mode
     },
     provide_context=True,
@@ -207,9 +207,9 @@ process_state_tabel_task = PythonOperator(
     python_callable=generic_etl,
     params={
         "S3_BUCKET_NAME": Variable.get("S3_BUCKET_NAME"),
-        "LABEL_DESP_PATH": Variable.get("LABEL_DESP_PATH"),
+        "LABEL_STAGING": Variable.get("LABEL_DESP_STAGING_PATH"),
         "OUTPUT_FILE_KEY": Variable.get("STATE_OUTPUT_FILE_KEY"),
-        "DATA_KWY_WORD": "I94ADDR",
+        # "DATA_KWY_WORD": "I94ADDR",
         "TABLE_NAME":"state",
         "ETL_FUN":desp_tables.process_i94_mode
     },
@@ -222,10 +222,10 @@ process_visa_type_task = PythonOperator(
     python_callable=generic_etl,
     params={
         "S3_BUCKET_NAME": Variable.get("S3_BUCKET_NAME"),
-        "LABEL_DESP_PATH": Variable.get("LABEL_DESP_PATH"),
+        "LABEL_STAGING": Variable.get("LABEL_DESP_STAGING_PATH"),
         "OUTPUT_FILE_KEY": Variable.get("VISA_OUTPUT_FILE_KEY"),
-        "DATA_KWY_WORD": "I94VISA",
-        "TABLE_NAME":"i94 visa",
+        # "DATA_KWY_WORD": "I94VISA",
+        "TABLE_NAME":"visa",
         "ETL_FUN":desp_tables.process_i94_visa
     },
     provide_context=True,
@@ -263,7 +263,7 @@ check_i94_mode_task = PythonOperator(
     params={
         "S3_BUCKET_NAME": Variable.get("S3_BUCKET_NAME"),
         "OUTPUT_DATA_FILE_KEY":Variable.get("STATE_OUTPUT_FILE_KEY"),
-        "CHECK_TABLE_NAME": "i94 mode"
+        "CHECK_TABLE_NAME": "i94_mode"
     },
     provide_context=True,
     dag=dag
@@ -293,11 +293,14 @@ check_visa_table_task = PythonOperator(
     dag=dag
 )
 
-start_task >> process_port_data_task
-start_task >> process_country_data_task
-start_task >> process_i94_mode_task
-start_task >> process_state_tabel_task
-start_task >> process_visa_type_task
+
+start_task >> extract_data_from_label_desp
+
+extract_data_from_label_desp >> process_port_data_task
+extract_data_from_label_desp >> process_country_data_task
+extract_data_from_label_desp >> process_i94_mode_task
+extract_data_from_label_desp >> process_state_tabel_task
+extract_data_from_label_desp >> process_visa_type_task
 
 process_port_data_task >> check_port_data_task
 process_country_data_task >> check_country_data_task

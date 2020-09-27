@@ -11,8 +11,6 @@ from airflow.models import Variable
 from airflow import AirflowException
 
 from libs import emr_lib
-from Immigation_ETL import port_table as port_lib
-from Immigation_ETL import port_data_quality as port_quality
 
 ## SET variables
 ## EC2
@@ -85,46 +83,6 @@ def submit_to_emr(**kwargs):
     emr_lib.kill_spark_session(session_url)
     logging.info("=== Spark session closed.")
 
-
-def process_port_data(**kwargs):
-    """
-    This function process port table.
-    :param kwargs:
-    :return:
-    """
-    logging.info("\n Reading US states and port data.")
-    st = time.time()
-    ### read US state data
-    us_state_path = "s3a://{}/{}".format(kwargs["params"]["S3_BUCKET_NAME"], kwargs["params"]["US_STATE_PATH"])
-    df_states = pd.read_csv(us_state_path)
-
-    label_description_path = "s3a://{}/{}".format(kwargs["params"]["S3_BUCKET_NAME"], kwargs["params"]["LABEL_DESP_PATH"])
-    str_port = port_lib.get_port(label_description_path)
-    logging.info(f"=== Finished reading port data. Used {(time.time() - st)/60:5.2f}min.")
-
-    logging.info("\n Starting port table ETL process.")
-    st = time.time()
-    df_port = port_lib.port_etl(str_port, df_states)
-    logging.info(f"=== Finished processing port data. Used {(time.time() - st)/60:5.2f}min.")
-
-    output_path = "s3a://{}/{}".format(kwargs["params"]["S3_BUCKET_NAME"], kwargs["params"]["PORT_OUTPUT_FILE_KEY"])
-    df_port.to_csv(output_path)
-    logging.info("\n Port data has been saved to S3.")
-
-
-def check_port_data(**kwargs):
-    """
-    This function performs various data checks to port dataset.
-    :param kwargs:
-    :return:
-    """
-    ## check if data is empty
-    port_output_path = "s3a://{}/{}".format(kwargs["params"]["S3_BUCKET_NAME"], kwargs["params"]["PORT_OUTPUT_FILE_KEY"])
-    is_empty = port_quality.is_empty(port_output_path)
-    if is_empty:
-        raise AirflowException("Data check failed! Port table is empty!")
-    else:
-        logging.info("Port data check passed!")
 
 
 
