@@ -4,14 +4,23 @@ import pandas as pd
 import numpy as np
 
 
+from airflow.models import Variable
+
 def extract_label_desp_data(**kwargs):
     ## get parameters
     s3_bucket_name = kwargs["params"]["S3_BUCKET_NAME"]
     label_desp_key_path = kwargs["params"]["LABEL_DESP_PATH"]
     output_key_path = kwargs["params"]["LABEL_DESP_STAGING_PATH"]
+    AWS_KEY = Variable.get("AWS_KEY")
+    AWS_SECRET = Variable.get("AWS_SECRET")
 
     ## read data from S3
-    s3 = boto3.resource('s3')
+    s3 = boto3.resource('s3',
+                        aws_access_key_id=AWS_KEY,
+                        aws_secret_access_key= AWS_SECRET)
+
+
+
     obj = s3.Object(s3_bucket_name, label_desp_key_path)
     data_str = obj.get()['Body'].read()
     data_str = str(data_str).split(';')
