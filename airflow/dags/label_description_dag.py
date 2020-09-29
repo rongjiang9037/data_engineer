@@ -7,6 +7,7 @@ import pandas as pd
 from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
 from airflow.operators.dummy_operator import DummyOperator
+from airflow.hooks.S3_hook import S3Hook
 from airflow.models import Variable
 from airflow import AirflowException
 
@@ -18,7 +19,7 @@ from Immigation_ETL import desp_tables_quality as desp_quality
 Variable.set("S3_BUCKET_NAME", "immigrate-demographics-s3-1629")
 
 ## input file key
-Variable.set("US_STATE_PATH", "data/us_states.csv")
+Variable.set("US_STATE_PATH", "data/state_table.csv")
 Variable.set("LABEL_DESP_PATH", "data/I94_SAS_Labels_Descriptions.SAS")
 
 ## output file
@@ -39,7 +40,7 @@ def port_etl(**kwargs):
     """
     ## get parameters
     s3_bucket_name = kwargs["params"]["S3_BUCKET_NAME"]
-    us_state_key = kwargs["params"]["US_STATE_PATH"]
+    us_state_key = kwargs["params"]["STATE_OUTPUT_FILE_KEY"]
     label_desp_key_path = kwargs["params"]["LABEL_STAGING"]
     table_name = kwargs["params"]["TABLE_NAME"]
     port_output_key = kwargs["params"]["PORT_OUTPUT_FILE_KEY"]
@@ -47,13 +48,13 @@ def port_etl(**kwargs):
     logging.info("\n Reading US states and port data.")
     st = time.time()
     ### read US state data
-    us_state_path = "s3://{}/{}".format(s3_bucket_name, us_state_key)
+    us_state_path = "s3a://{}/{}".format(s3_bucket_name, us_state_key)
     df_states = pd.read_csv(us_state_path)
 
     ## extract port data
-    us_port_path = "s3://{}/{}".format(s3_bucket_name, label_desp_key_path)
+    us_port_path = "s3a://{}/{}".format(s3_bucket_name, label_desp_key_path)
     df_port = pd.read_csv(us_port_path)
-    df_port = df_port.loc[df_port['type'] == 'port']
+    df_port = df_port.loc[df_port['type'] == 'port', :]
     logging.info("=== Finished reading US states and port data. Used {:5.2f}min.".format((time.time() - st)/60))
 
     ## data process
@@ -89,9 +90,9 @@ def generic_etl(**kwargs):
     ## read data
     logging.info("\n Reading {} data.".format(table_name))
     st = time.time()
-    label_stating_path = "s3a://{}/{}".format(s3_bucket_name, label_desp_key_path)
-    df = pd.read_csv(label_stating_path)
-    df = df.loc[df['type'] == table_name]
+    label_staging_path = "s3a://{}/{}".format(s3_bucket_name, label_desp_key_path)
+    df = pd.read_csv(label_staging_path)
+    df = df.loc[df['type'] == table_name, :]
     logging.info("=== Finished reading {} data. Used {:5.2f}min.".format(table_name, (time.time() - st)/60))
 
     ## data process
@@ -102,7 +103,7 @@ def generic_etl(**kwargs):
 
     ## save to S3
     output_path = "s3://{}/{}".format(s3_bucket_name, output_key_path)
-    df.to_csv(output_path)
+    df.to_csv(output_path, index=False)
     logging.info("\n {} data has been saved to S3.".format(table_name))
 
 
@@ -163,7 +164,7 @@ process_port_data_task = PythonOperator(
     python_callable=port_etl,
     params={
         "S3_BUCKET_NAME": Variable.get("S3_BUCKET_NAME"),
-        "US_STATE_PATH": Variable.get("US_STATE_PATH"),
+        "US_STATE_PATH": Variable.get("STATE_OUTPUT_FILE_KEY"),
         "LABEL_STAGING": Variable.get("LABEL_DESP_STAGING_PATH"),
         "PORT_OUTPUT_FILE_KEY": Variable.get("PORT_OUTPUT_FILE_KEY"),
         "TABLE_NAME":"port"
@@ -211,7 +212,7 @@ process_state_tabel_task = PythonOperator(
         "OUTPUT_FILE_KEY": Variable.get("STATE_OUTPUT_FILE_KEY"),
         # "DATA_KWY_WORD": "I94ADDR",
         "TABLE_NAME":"state",
-        "ETL_FUN":desp_tables.process_i94_mode
+        "ETL_FUN":desp_tables.process_state
     },
     provide_context=True,
     dag=dag
@@ -296,10 +297,9 @@ check_visa_table_task = PythonOperator(
 
 start_task >> extract_data_from_label_desp
 
-extract_data_from_label_desp >> process_port_data_task
+extract_data_from_label_desp >> process_state_tabel_task >> process_port_data_task
 extract_data_from_label_desp >> process_country_data_task
 extract_data_from_label_desp >> process_i94_mode_task
-extract_data_from_label_desp >> process_state_tabel_task
 extract_data_from_label_desp >> process_visa_type_task
 
 process_port_data_task >> check_port_data_task
