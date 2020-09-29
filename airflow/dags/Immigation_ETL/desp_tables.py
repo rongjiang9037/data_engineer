@@ -64,7 +64,6 @@ def extract_label_desp_data(**kwargs):
     ### combine and save as DataFrame to S3
     combined_list = port_info_list + region_list + i94mode_list + visa_list + state_info_list
     df = pd.DataFrame(combined_list, columns=['code', 'value', 'type'])
-    print(df.head())
     output_path = "s3://{}/{}".format(s3_bucket_name, output_key_path)
     df.to_csv(output_path, index=False)
 

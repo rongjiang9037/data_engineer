@@ -85,9 +85,9 @@ def generic_etl(**kwargs):
     ## read data
     logging.info("\n Reading {} data.".format(table_name))
     st = time.time()
-    label_stating_path = "s3a://{}/{}".format(s3_bucket_name, label_desp_key_path)
-    df = pd.read_csv(label_stating_path)
-    df = df.loc[df['type'] == table_name]
+    label_staging_path = "s3a://{}/{}".format(s3_bucket_name, label_desp_key_path)
+    df = pd.read_csv(label_staging_path)
+    df = df.loc[df['type'] == table_name, :]
     logging.info("=== Finished reading {} data. Used {:5.2f}min.".format(table_name, (time.time() - st)/60))
 
     ## data process
@@ -98,7 +98,7 @@ def generic_etl(**kwargs):
 
     ## save to S3
     output_path = "s3://{}/{}".format(s3_bucket_name, output_key_path)
-    df.to_csv(output_path)
+    df.to_csv(output_path, index=False)
     logging.info("\n {} data has been saved to S3.".format(table_name))
 
 
@@ -159,6 +159,10 @@ process_port_data_task = PythonOperator(
     python_callable=port_etl,
     params={
         "S3_BUCKET_NAME": Variable.get("S3_BUCKET_NAME"),
+<<<<<<< HEAD
+=======
+        "US_STATE_PATH": Variable.get("STATE_OUTPUT_FILE_KEY"),
+>>>>>>> 02553bf163e61948232f19716da2b49dac35ddf0
         "LABEL_STAGING": Variable.get("LABEL_DESP_STAGING_PATH"),
         "PORT_OUTPUT_FILE_KEY": Variable.get("PORT_OUTPUT_FILE_KEY"),
         "TABLE_NAME":"port"
@@ -206,7 +210,7 @@ process_state_tabel_task = PythonOperator(
         "OUTPUT_FILE_KEY": Variable.get("STATE_OUTPUT_FILE_KEY"),
         # "DATA_KWY_WORD": "I94ADDR",
         "TABLE_NAME":"state",
-        "ETL_FUN":desp_tables.process_i94_mode
+        "ETL_FUN":desp_tables.process_state
     },
     provide_context=True,
     dag=dag
@@ -291,10 +295,9 @@ check_visa_table_task = PythonOperator(
 
 start_task >> extract_data_from_label_desp
 
-extract_data_from_label_desp >> process_port_data_task
+extract_data_from_label_desp >> process_state_tabel_task >> process_port_data_task
 extract_data_from_label_desp >> process_country_data_task
 extract_data_from_label_desp >> process_i94_mode_task
-extract_data_from_label_desp >> process_state_tabel_task
 extract_data_from_label_desp >> process_visa_type_task
 
 process_port_data_task >> check_port_data_task
