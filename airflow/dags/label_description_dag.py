@@ -159,10 +159,6 @@ process_port_data_task = PythonOperator(
     python_callable=port_etl,
     params={
         "S3_BUCKET_NAME": Variable.get("S3_BUCKET_NAME"),
-<<<<<<< HEAD
-=======
-        "US_STATE_PATH": Variable.get("STATE_OUTPUT_FILE_KEY"),
->>>>>>> 02553bf163e61948232f19716da2b49dac35ddf0
         "LABEL_STAGING": Variable.get("LABEL_DESP_STAGING_PATH"),
         "PORT_OUTPUT_FILE_KEY": Variable.get("PORT_OUTPUT_FILE_KEY"),
         "TABLE_NAME":"port"
@@ -295,7 +291,8 @@ check_visa_table_task = PythonOperator(
 
 start_task >> extract_data_from_label_desp
 
-extract_data_from_label_desp >> process_state_tabel_task >> process_port_data_task
+extract_data_from_label_desp >> process_state_tabel_task 
+extract_data_from_label_desp >> process_port_data_task
 extract_data_from_label_desp >> process_country_data_task
 extract_data_from_label_desp >> process_i94_mode_task
 extract_data_from_label_desp >> process_visa_type_task
