@@ -18,7 +18,6 @@ from Immigation_ETL import desp_tables_quality as desp_quality
 Variable.set("S3_BUCKET_NAME", "immigrate-demographics-s3-1629")
 
 ## input file key
-Variable.set("US_STATE_PATH", "data/us_states.csv")
 Variable.set("LABEL_DESP_PATH", "data/I94_SAS_Labels_Descriptions.SAS")
 
 ## output file
@@ -39,21 +38,18 @@ def port_etl(**kwargs):
     """
     ## get parameters
     s3_bucket_name = kwargs["params"]["S3_BUCKET_NAME"]
-    us_state_key = kwargs["params"]["US_STATE_PATH"]
     label_desp_key_path = kwargs["params"]["LABEL_STAGING"]
     table_name = kwargs["params"]["TABLE_NAME"]
     port_output_key = kwargs["params"]["PORT_OUTPUT_FILE_KEY"]
 
     logging.info("\n Reading US states and port data.")
     st = time.time()
-    ### read US state data
-    us_state_path = "s3://{}/{}".format(s3_bucket_name, us_state_key)
-    df_states = pd.read_csv(us_state_path)
 
-    ## extract port data
+    ## extract port and state data
     us_port_path = "s3://{}/{}".format(s3_bucket_name, label_desp_key_path)
     df_port = pd.read_csv(us_port_path)
     df_port = df_port.loc[df_port['type'] == 'port']
+    df_states = df_port.loc[df_port['type'] == 'state']
     logging.info("=== Finished reading US states and port data. Used {:5.2f}min.".format((time.time() - st)/60))
 
     ## data process
@@ -163,7 +159,6 @@ process_port_data_task = PythonOperator(
     python_callable=port_etl,
     params={
         "S3_BUCKET_NAME": Variable.get("S3_BUCKET_NAME"),
-        "US_STATE_PATH": Variable.get("US_STATE_PATH"),
         "LABEL_STAGING": Variable.get("LABEL_DESP_STAGING_PATH"),
         "PORT_OUTPUT_FILE_KEY": Variable.get("PORT_OUTPUT_FILE_KEY"),
         "TABLE_NAME":"port"

@@ -76,7 +76,7 @@ def process_port(df_port, df_states):
     :param df_states: DataFrame format, contains US 50 states name and abbr
     :return:
     """
-    states_list = df_states['Abbreviation'].unique()
+    states_list = df_states['code'].unique()
     def is_us(x):
         if len(np.intersect1d(np.array(x.split(' ')), states_list)) > 0:
             return True
