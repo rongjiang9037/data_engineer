@@ -1,5 +1,6 @@
 import boto3
 import re
+import logging
 import pandas as pd
 import numpy as np
 
@@ -76,6 +77,7 @@ def process_port(df_port, df_states):
     :return:
     """
     states_list = df_states['code'].unique()
+    print(states_list)
     def is_us(x):
         if len(np.intersect1d(np.array(x.split(' ')), states_list)) > 0:
             return True

@@ -11,6 +11,7 @@ from airflow.models import Variable
 from airflow import AirflowException
 
 from libs import emr_lib
+from Immigation_ETL import desp_tables_quality as data_quality
 
 ## SET variables
 ## EC2
@@ -30,8 +31,10 @@ Variable.set("WORKER_COUNT", 2)
 Variable.set("VPC_NAME", "IMMIGRATE_DEMOGRAPHICS_VPC")
 ## input / output file key
 Variable.set("I94_INPUT_FILE_KEY", "data/immigration_data_sample.csv")
+Variable.set("DEMO_INPUT_FILE_KEY", "data/us-cities-demographics.csv")
 Variable.set("I94_OUTPUT_FILE_KEY", "output/i94_table.parquet")
 Variable.set("TIME_OUTPUT_FILE_KEY", "output/time_table.parquet")
+Variable.set("DEMO_OUTPUT_FILE_KEY", "output/demo_tabler.csv")
 
 
 def create_emr():
@@ -84,6 +87,56 @@ def submit_to_emr(**kwargs):
     logging.info("=== Spark session closed.")
 
 
+
+def demo_etl(**kwargs):
+    """
+    This is the ETL function for demographics data.
+    :param kwargs:
+    :return:
+    """
+    ## get parameters
+    s3_bucket_name = kwargs["params"]["S3_BUCKET_NAME"]
+    demo_input_key = kwargs["params"]["DEMO_INPUT_FILE_KEY"]
+    demo_output_key = kwargs["params"]["DEMO_OUTPUT_FILE_KEY"]
+    table_name = kwargs["params"]["TABLE_NAME"]
+
+    ## read file
+    logging.info(" Reading US demographics data.")
+    st = time.time()
+
+    demo_input_url = "s3://{}/{}".format(s3_bucket_name, demo_input_key)
+    df_demo = pd.read_csv(demo_input_url)
+
+    ## demographic data is pretty clean so no need to process
+    df_demo = df_demo[['city', 'state', 'median_age', 'male_population', 'female_population',
+       'total_population', 'number_of_veterans', 'foreign-born',
+       'average_household_size', 'state_code', 'race', 'count']]
+
+    ## save to S3
+    demo_output_url = "s3://{}/{}".format(s3_bucket_name, demo_output_key)
+    df_demo.to_csv(demo_output_url)
+    logging.info("=== Finished processing {} data. Used {:5.2f}min.".format(table_name, (time.time() - st)/60))
+
+
+def data_check(**kwargs):
+    """
+    This function performs various data checks to port dataset.
+    :param kwargs:
+    :return:
+    """
+    ## get parameters
+    ### ouptut file key
+    s3_bucket_name = kwargs["params"]["S3_BUCKET_NAME"]
+    output_file_key = kwargs["params"]["OUTPUT_DATA_FILE_KEY"]
+    table_name = kwargs["params"]["CHECK_TABLE_NAME"]
+
+    ## check if data is empty
+    country_output_path = "s3a://{}/{}".format(s3_bucket_name, output_file_key)
+    is_empty = data_quality.is_empty(country_output_path)
+    if is_empty:
+        raise AirflowException("Data check failed! {} table is empty!".format(table_name))
+    else:
+        logging.info("{} data check passed!".format(table_name))
 
 
 dag = DAG(
@@ -143,6 +196,19 @@ process_time_task = PythonOperator(
     dag=dag
 )
 
+process_demo_task = PythonOperator(
+    task_id = "process_demo_data",
+    python_callable=demo_etl,
+    params={
+        "S3_BUCKET_NAME": Variable.get("S3_BUCKET_NAME"),
+        "DEMO_INPUT_FILE_KEY": Variable.get("DEMO_INPUT_FILE_KEY"),
+        "DEMO_OUTPUT_FILE_KEY": Variable.get("DEMO_OUTPUT_FILE_KEY"),
+        "TABLE_NAME": "demographics"
+    },
+    provide_context=True,
+    dag=dag
+)
+
 check_i94_data_task = PythonOperator(
     task_id="check_i94_data",
     python_callable=submit_to_emr,
@@ -173,11 +239,25 @@ check_time_data_task = PythonOperator(
     dag=dag
 )
 
+check_demo_data_task = PythonOperator(
+    task_id="check_demo_data",
+    python_callable=data_check,
+    params={
+        "S3_BUCKET_NAME": Variable.get("S3_BUCKET_NAME"),
+        "OUTPUT_DATA_FILE_KEY": Variable.get("DEMO_OUTPUT_FILE_KEY"),
+        "CHECK_TABLE_NAME": "demographics"
+    },
+    provide_context=True,
+    dag=dag
+)
 
 start_task >> create_emr_task
 
 create_emr_task >> process_i94_task
 create_emr_task >> process_time_task
+create_emr_task >> process_demo_task
+
+process_demo_task >> check_demo_data_task
 process_i94_task >> check_i94_data_task
 process_time_task >> check_time_data_task
 

@@ -11,7 +11,7 @@ from airflow.models import Variable
 from airflow import AirflowException
 
 from Immigation_ETL import desp_tables
-from Immigation_ETL import desp_tables_quality as desp_quality
+from Immigation_ETL import desp_tables_quality as data_quality
 
 ## SET variables
 ## S3
@@ -42,18 +42,18 @@ def port_etl(**kwargs):
     table_name = kwargs["params"]["TABLE_NAME"]
     port_output_key = kwargs["params"]["PORT_OUTPUT_FILE_KEY"]
 
-    logging.info("\n Reading US states and port data.")
+    logging.info(" Reading US states and port data.")
     st = time.time()
-
     ## extract port and state data
     us_port_path = "s3://{}/{}".format(s3_bucket_name, label_desp_key_path)
-    df_port = pd.read_csv(us_port_path)
-    df_port = df_port.loc[df_port['type'] == 'port']
-    df_states = df_port.loc[df_port['type'] == 'state']
+    df = pd.read_csv(us_port_path)
+    df_port = df.loc[df['type'] == 'port']
+    df_states = df.loc[df['type'] == 'state']
+    logging.info("port shape: {}".format(df_port.shape))
     logging.info("=== Finished reading US states and port data. Used {:5.2f}min.".format((time.time() - st)/60))
 
     ## data process
-    logging.info("\n Starting process {} table.".format(table_name))
+    logging.info(" Starting process {} table.".format(table_name))
     st = time.time()
     df_port = desp_tables.process_port(df_port, df_states)
     logging.info("=== Finished processing {} data. Used {:5.2f}min.".format(table_name, (time.time() - st)/60))
@@ -61,7 +61,7 @@ def port_etl(**kwargs):
     ## save to S3
     output_path = "s3a://{}/{}".format(s3_bucket_name, port_output_key)
     df_port.to_csv(output_path)
-    logging.info("\n Port data has been saved to S3.")
+    logging.info(" Port data has been saved to S3.")
 
 
 def generic_etl(**kwargs):
@@ -83,7 +83,7 @@ def generic_etl(**kwargs):
 
 
     ## read data
-    logging.info("\n Reading {} data.".format(table_name))
+    logging.info(" Reading {} data.".format(table_name))
     st = time.time()
     label_staging_path = "s3a://{}/{}".format(s3_bucket_name, label_desp_key_path)
     df = pd.read_csv(label_staging_path)
@@ -91,7 +91,7 @@ def generic_etl(**kwargs):
     logging.info("=== Finished reading {} data. Used {:5.2f}min.".format(table_name, (time.time() - st)/60))
 
     ## data process
-    logging.info("\n Starting {} table ETL process.".format(table_name))
+    logging.info(" Starting {} table ETL process.".format(table_name))
     st = time.time()
     df = etl_func(df)
     logging.info("=== Finished processing {} data. Used {:5.2f}min.".format(table_name, (time.time() - st)/60))
@@ -99,7 +99,7 @@ def generic_etl(**kwargs):
     ## save to S3
     output_path = "s3://{}/{}".format(s3_bucket_name, output_key_path)
     df.to_csv(output_path, index=False)
-    logging.info("\n {} data has been saved to S3.".format(table_name))
+    logging.info(" {} data has been saved to S3.".format(table_name))
 
 
 
@@ -117,7 +117,7 @@ def data_check(**kwargs):
 
     ## check if data is empty
     country_output_path = "s3a://{}/{}".format(s3_bucket_name, output_file_key)
-    is_empty = desp_quality.is_empty(country_output_path)
+    is_empty = data_quality.is_empty(country_output_path)
     if is_empty:
         raise AirflowException("Data check failed! {} table is empty!".format(table_name))
     else:
@@ -291,7 +291,7 @@ check_visa_table_task = PythonOperator(
 
 start_task >> extract_data_from_label_desp
 
-extract_data_from_label_desp >> process_state_tabel_task 
+extract_data_from_label_desp >> process_state_tabel_task
 extract_data_from_label_desp >> process_port_data_task
 extract_data_from_label_desp >> process_country_data_task
 extract_data_from_label_desp >> process_i94_mode_task
