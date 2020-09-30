@@ -3,6 +3,7 @@ import time
 import logging
 
 import pandas as pd
+import numpy as np
 
 from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
@@ -111,6 +112,7 @@ def demo_etl(**kwargs):
     df_demo = df_demo[['city', 'state', 'median_age', 'male_population', 'female_population',
        'total_population', 'number_of_veterans', 'foreign-born',
        'average_household_size', 'state_code', 'race', 'count']]
+    df_demo['demo_key'] = np.range(df_demo.shape[0])
 
     ## save to S3
     demo_output_url = "s3://{}/{}".format(s3_bucket_name, demo_output_key)
@@ -261,7 +263,7 @@ process_demo_task >> check_demo_data_task
 process_i94_task >> check_i94_data_task
 process_time_task >> check_time_data_task
 
-
+check_demo_data_task >> remove_emr_task
 check_i94_data_task >> remove_emr_task
 check_time_data_task >> remove_emr_task
 
