@@ -44,7 +44,7 @@ Upon completion, download **Access Key ID and Secret Access Key**.
 git clone https://github.com/rongjiang9037/data_engineer.git
 ```
 2. Copy AWS credentials (KEY, SECRET KEY, ARN)to:   `config/aws_credential.ckg` \
-A sample notice can be found in `config/aws_credentials_sample.cfg` \
+A sample notice can be found in `config/aws_credentials_sample.cfg` 
 
 3. Create VPC, subnets, EC2 instance for this application:
 ```
