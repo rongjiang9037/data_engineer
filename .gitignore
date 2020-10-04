@@ -1,2 +1,3 @@
 #AWS credentials 
 aws_credentials.cfg
+*.ipynb_checkpoints

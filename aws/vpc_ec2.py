@@ -1,21 +1,19 @@
 import os
 
 import boto3
-import botocore
 import configparser
-import paramiko
 
 from botocore.exceptions import ClientError
 
 config_aws = configparser.ConfigParser()
-config_aws.read_file(open('../aws_credentials.cfg'))
+config_aws.read_file(open('../config/aws_credentials.cfg'))
 
 KEY                    = config_aws.get('AWS','KEY')
 SECRET                 = config_aws.get('AWS','SECRET')
 ARN                    = config_aws.get('AWS', 'ARN')
 
 config_instance = configparser.ConfigParser()
-config_instance.read_file(open('../aws_setup.cfg'))
+config_instance.read_file(open('../config/aws_setup.cfg'))
 
 AMI_ID                 = config_instance.get('AWS', 'AMI_ID')
 KEY_PAIR_NAME          = config_instance.get('AWS', 'KEY_PAIR_NAME') 
@@ -208,7 +206,8 @@ def establish_connection(ec2_client, vpc, ig, subnet_pub):
                                                         'Values': [vpc.vpc_id]}
                                                      ])
     sg_id = sg['SecurityGroups'][0]['GroupId']
-    ## 2.2 add imbound rule for the security group, allowing SSH connect from all the internet
+    ## 2.2 add imbound rule for the security group
+    ## allowing SSH and airflow connect from all the internet
     ec2_client.authorize_security_group_ingress(GroupId = sg_id,
                                             IpPermissions=[
                                             {
@@ -332,16 +331,3 @@ if __name__ == '__main__':
     
     
     
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-

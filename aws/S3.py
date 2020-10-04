@@ -6,7 +6,7 @@ import configparser
 
 
 config_aws = configparser.ConfigParser()
-config_aws.read_file(open('../aws_credentials.cfg'))
+config_aws.read_file(open('../config/aws_credentials.cfg'))
 
 KEY                    = config_aws.get('AWS','KEY')
 SECRET                 = config_aws.get('AWS','SECRET')
@@ -14,7 +14,7 @@ ARN                    = config_aws.get('AWS', 'IAM_ARN')
 
 
 config_s3 = configparser.ConfigParser()
-config_s3.read_file(open('../aws_setup.cfg'))
+config_s3.read_file(open('../config/aws_setup.cfg'))
 
 S3_REGION              = config_s3.get('S3', 'REGION')
 S3_BUCKET_NAME         = config_s3.get('S3', 'NAME')
@@ -28,7 +28,7 @@ def create_s3_bucket(s3, s3_client):
         if not s3.Bucket(S3_BUCKET_NAME) in s3.buckets.all():
             ## create s3 bucket
             response = s3_client.create_bucket(
-            ACL='public-read-write',
+            # ACL='public-read-write',
             Bucket=S3_BUCKET_NAME,
             CreateBucketConfiguration={
                 'LocationConstraint': S3_REGION
@@ -73,9 +73,8 @@ def create_folder(s3_client, folder_name):
     """
     This function creates a empty folder in S3.
     """
-    s3_client.put_object(ACL='public-read-write',
-                     Bucket=S3_BUCKET_NAME, 
-                     Key=folder_name+'/')
+    s3_client.put_object(Bucket=S3_BUCKET_NAME,
+                        Key=folder_name+'/')
     
     
 if __name__ == '__main__':
@@ -109,11 +108,6 @@ if __name__ == '__main__':
     st = time.time()
     upload_file(s3_client, "..", 'data/immigration_data_sample.csv')
     print(f"===Immigration sample data uploaded to S3. Used {(time.time() -st)/60:5.2f}min")
-              
-    print("Uploading US states data to S3.")
-    st = time.time()
-    upload_file(s3_client, "..", 'data/us_states.csv')
-    print(f"===US states data uploaded to S3. Used {(time.time() -st)/60:5.2f}min")
                         
     print("Uploading I94 label description data to S3.")
     st = time.time()
@@ -128,6 +122,6 @@ if __name__ == '__main__':
     print("Creating logs folder for Spark")
     st = time.time()
     create_folder(s3_client, 'logs')
-    print(f"===lo. Used {(time.time() -st)/60:5.2f}min")
+    print(f"===log Used {(time.time() -st)/60:5.2f}min")
     
-    
+
