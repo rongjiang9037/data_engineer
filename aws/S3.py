@@ -94,32 +94,32 @@ if __name__ == '__main__':
     aws_access_key_id=KEY,
     aws_secret_access_key= SECRET)
     
-    print("Creating S3 bucket...")
+    print("\nCreating S3 bucket...")
     st = time.time()
     create_s3_bucket(s3, s3_client)
     print(f"===S3://{S3_BUCKET_NAME} is ready. Used {(time.time() -st)/60:5.2f}min")
     
-    print("Uploading immigation data to S3.")
+    print("\nUploading immigation data to S3.")
     st = time.time()
     upload_folder(s3_client, "..", 'data/sas_data')
     print(f"===immigration data uploaded to S3. Used {(time.time() -st)/60:5.2f}min")
 
-    print("Uploading immigation sample data to S3.")
+    print("\nUploading immigation sample data to S3.")
     st = time.time()
     upload_file(s3_client, "..", 'data/immigration_data_sample.csv')
     print(f"===Immigration sample data uploaded to S3. Used {(time.time() -st)/60:5.2f}min")
                         
-    print("Uploading I94 label description data to S3.")
+    print("\nUploading I94 label description data to S3.")
     st = time.time()
     upload_file(s3_client, "..", 'data/I94_SAS_Labels_Descriptions.SAS')
     print(f"===I94 label description data uploaded to S3. Used {(time.time() -st)/60:5.2f}min")
                                   
-    print("Uploading US city demographics data to S3.")
+    print("\nUploading US city demographics data to S3.")
     st = time.time()
     upload_file(s3_client, "..", 'data/us-cities-demographics.csv')
     print(f"===US city demographics data uploaded to S3. Used {(time.time() -st)/60:5.2f}min")
                                             
-    print("Creating logs folder for Spark")
+    print("\nCreating logs folder for Spark")
     st = time.time()
     create_folder(s3_client, 'logs')
     print(f"===log Used {(time.time() -st)/60:5.2f}min")
