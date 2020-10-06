@@ -34,14 +34,25 @@ PVR_SUBNET_NAME        = config_instance.get("SUBNET", "PVR_SUBNET_NAME")
 PUB_SPARK_SUBNET_NAME        = config_instance.get("SUBNET", "PUB_SPARK_SUBNET_NAME")
 PUB_SPARK_SUBNET_CIDR_BLOCK  = config_instance.get("SUBNET", "PUB_SPARK_SUBNET_CIDR_BLOCK")
 PUB_SPARK_SUBNET_REGION      = config_instance.get("SUBNET", "PUB_SPARK_SUBNET_REGION")
-## private subnet
+## private subnet (empty)
 PVR_SUBNET_NAME        = config_instance.get("SUBNET", "PVR_SUBNET_NAME")
 PVR_SUBNET_CIDR_BLOCK  = config_instance.get("SUBNET", "PVR_SUBNET_CIDR_BLOCK")
 PVR_SUBNET_REGION      = config_instance.get("SUBNET", "PVR_SUBNET_REGION")
+## private subnet for RDS
+PVR_RDS_SUBNET_NAME        = config_instance.get("SUBNET", "PVR_RDS_SUBNET_NAME")
+PVR_RDS_SUBNET_CIDR_BLOCK  = config_instance.get("SUBNET", "PVR_RDS_SUBNET_CIDR_BLOCK")
+PVR_RDS_SUBNET_REGION      = config_instance.get("SUBNET", "PVR_RDS_SUBNET_REGION")
 ## route table config
 RT_NAME                = config_instance.get("ROUTE_TABLE", "NAME")
 ## internet gateway config
 IG_NAME                = config_instance.get("IG", "NAME")
+## security group
+RDS_SG_NAME            = config_instance.get("SG", "RDS_SG_NAM")
+## RDS
+RDS_NAME               = config_instance.get("RDS", "NAME")
+RDS_IDENTIFIER         = config_instance.get("RDS", "RDS_IDENTIFIER")
+RDS_TYPE               = config_instance.get("RDS", "TYPE")
+
 
 def get_keypair(ec2):
     """
@@ -218,10 +229,15 @@ def establish_connection(ec2_client, vpc, ig, subnet_pub1, subnet_pub2):
     sg = ec2_client.describe_security_groups(Filters=[{"Name": "vpc-id",
                                                         "Values": [vpc.vpc_id]}
                                                      ])
-    sg_id = sg["SecurityGroups"][0]["GroupId"]
+    for sg_ in sg["SecurityGroups"]:
+        if sg_["Description"] == "default VPC security group":
+            sg_default = sg_
+            break
+
+    sg_default_id = sg_default["GroupId"]
     ## 2.2 add imbound rule for the security group
     ## allowing SSH and airflow connect from all the internet
-    ec2_client.authorize_security_group_ingress(GroupId = sg_id,
+    ec2_client.authorize_security_group_ingress(GroupId = sg_default_id,
                                             IpPermissions=[
                                             {
                                                 "FromPort": 22,
@@ -249,7 +265,7 @@ def establish_connection(ec2_client, vpc, ig, subnet_pub1, subnet_pub2):
     print("===Security group config is ready.")
     
     
-def create_ec2_with_eip(ec2, ec2_client, subnet_pub):
+def create_ec2_with_eip(ec2, ec2_client, subnet_pub_ec2):
     """
     This function creates a new EC2 instance and give it a Elastic IP address.
     
@@ -269,7 +285,7 @@ def create_ec2_with_eip(ec2, ec2_client, subnet_pub):
          KeyName=KEY_PAIR_NAME,
          NetworkInterfaces=[{
                  "DeviceIndex":0,
-                 "SubnetId": subnet_pub.subnet_id}],
+                 "SubnetId": subnet_pub_ec2.id}],
          TagSpecifications=[{
                 "ResourceType":"instance",
                 "Tags":[{"Key": "Name", "Value": EC2_NAME}]
@@ -297,6 +313,85 @@ def create_ec2_with_eip(ec2, ec2_client, subnet_pub):
     return instances, allocation["PublicIp"]
 
 
+def create_postgres_db(ec2_client, vpc,  subnet_prv_empty, subnet_prv_rds):
+    ## 1.1 create securtiry group for RDS
+    rds_sg = ec2_client.create_security_group(
+        VpcId=vpc.id,
+        Description=RDS_SG_NAME,
+        GroupName=RDS_SG_NAME,
+        TagSpecifications=[{
+            "ResourceType":"security-group",
+            "Tags":[{"Key": "Name", "Value": RDS_SG_NAME}]
+            }])
+    rds_sg_id = rds_sg["GroupId"]
+
+    ## 1.2 get default security group id
+    print("\n===Config security group, open port 5432 for postgres access.")
+    sg = ec2_client.describe_security_groups(Filters=[{"Name": "vpc-id",
+                                                        "Values": [vpc.vpc_id]}
+                                                     ])
+    for sg_ in sg["SecurityGroups"]:
+        if sg_["Description"] == "default VPC security group":
+            sg_default = sg_
+            break
+    sg_default_id = sg_default["GroupId"]
+
+    ## 1.3 allow TCP connect to port 5432
+    ec2_client.authorize_security_group_ingress(GroupId = rds_sg_id,
+                                            IpPermissions=[
+                                            {
+                                                "FromPort": 5432,
+                                                "IpProtocol": "tcp",
+                                                "UserIdGroupPairs": [
+                                                    {
+                                                        "GroupId": sg_default_id,
+                                                        "Description": "Postgres RDS",
+                                                    },
+                                                ],
+                                                "ToPort": 5432,
+                                            },
+                                        ],)
+    print("===Security group for Postgres RDS is ready.")
+
+    ## 1.4 create subnet group for RDS
+    print("\n===Creating subnet group for RDS")
+    rds_client = boto3.client("rds")
+    subnet_group = rds_client.create_db_subnet_group(
+            DBSubnetGroupName="IMMIGRATE_RDS_SUBNET_GROUPS",
+            DBSubnetGroupDescription="IMMIGRATE_RDS_SUBNET_GROUPS",
+            SubnetIds=[
+                subnet_prv_empty.id,
+                subnet_prv_rds.id
+            ],
+            Tags=[
+                {
+                    "Key": "Name",
+                    "Value": "IMMIGRATE_RDS_SUBNET_GROUPS"
+                },
+            ])
+    print("===Subnet group is ready.")
+
+    print("\n===Craeting DB instance...")
+    rds_instance = rds_client.create_db_instance(
+                       DBInstanceIdentifier=RDS_IDENTIFIER,
+                       AllocatedStorage=20,
+                       DBName=RDS_NAME,
+                       Engine="postgres",
+                       # General purpose SSD
+                       StorageType="gp2",
+                       MultiAZ=False,
+                       MasterUsername="immigrate_demo",
+                       MasterUserPassword="=p<%Gs7TS_pd%-",
+                       VpcSecurityGroupIds=[rds_sg["GroupId"]],
+                       DBSubnetGroupName=subnet_group["DBSubnetGroup"]["DBSubnetGroupName"],
+                       DBInstanceClass=RDS_TYPE
+    )
+    # wait till instance is ready
+    waiter = rds_client.get_waiter('db_instance_available')
+    waiter.wait(DBInstanceIdentifier=RDS_IDENTIFIER)
+    return rds_instance
+
+
 
 
     
@@ -320,20 +415,25 @@ if __name__ == "__main__":
     vpc = create_vpc(ec2)
     
     ## create a public subnet
-    subnet_pub1 = create_subnet(ec2=ec2, vpc=vpc, subnet_name=PUB_SUBNET_NAME,
+    subnet_pub_ec2 = create_subnet(ec2=ec2, vpc=vpc, subnet_name=PUB_SUBNET_NAME,
                             subnet_region=PUB_SUBNET_REGION, 
                             subnet_cidr_block=PUB_SUBNET_CIDR_BLOCK,
                             subnet_type="public")
     ## create a public subnet for EMR cluster
-    subnet_pub2 = create_subnet(ec2=ec2, vpc=vpc, subnet_name=PUB_SPARK_SUBNET_NAME,
+    subnet_pub_emr = create_subnet(ec2=ec2, vpc=vpc, subnet_name=PUB_SPARK_SUBNET_NAME,
                             subnet_region=PUB_SPARK_SUBNET_REGION,
                             subnet_cidr_block=PUB_SPARK_SUBNET_CIDR_BLOCK,
                             subnet_type="public")
     ## create a private subnet
-    subnet_prv = create_subnet(ec2=ec2, vpc=vpc, subnet_name=PVR_SUBNET_NAME,
+    subnet_prv_empty = create_subnet(ec2=ec2, vpc=vpc, subnet_name=PVR_SUBNET_NAME,
                             subnet_region=PVR_SUBNET_REGION, 
                             subnet_cidr_block=PVR_SUBNET_CIDR_BLOCK,
                             subnet_type="private")
+    subnet_prv_rds = create_subnet(ec2=ec2, vpc=vpc, subnet_name=PVR_RDS_SUBNET_NAME,
+                            subnet_region=PVR_RDS_SUBNET_REGION,
+                            subnet_cidr_block=PVR_RDS_SUBNET_CIDR_BLOCK,
+                            subnet_type="private")
+
     
     ## create internet gateway
     ig = create_ig(ec2)
@@ -342,9 +442,10 @@ if __name__ == "__main__":
     print("Attached the internet gateway to the VPC.")
     
     ## set up SSH connection from outside of VPC
-    establish_connection(ec2_client, vpc, ig, subnet_pub1, subnet_pub2)
-    instances, public_ip = create_ec2_with_eip(ec2, ec2_client, subnet_pub1)
+    establish_connection(ec2_client, vpc, ig, subnet_pub_ec2, subnet_pub_emr)
+    instances, public_ip = create_ec2_with_eip(ec2, ec2_client, subnet_pub_ec2)
+    rds_instance = create_postgres_db(ec2_client, vpc, subnet_prv_empty, subnet_prv_rds)
     print("\n===EC instance is ready!")
-    print(f"\nssh -i ec2-key.pem ec2-user@{public_ip}")
+    print(f"\nssh -i {KEY_PAIR_NAME}.pem ec2-user@{public_ip}")
     
 

@@ -18,9 +18,9 @@ The ETL process is orchestrated with Apache Airflow and the whole process is run
 # AWS Infrasctructure
 ![Image of aws architecture](https://www.dropbox.com/s/4c0zv3fjkteyzgx/aws_architecture.jpg?raw=1)
 # General Prerequisites
-Python 3.6 or higher version is required for this application.
-- s3fs
-- fsspec
+Python 3.8 or higher version is required for this application.
+- boto3 =1.14.31
+- botocore =1.17.44
 # Data Schema
 ![Image of ER Diagram](https://www.dropbox.com/s/399y0g2vwishgxa/capstone_project.jpeg?raw=1)
 # Apache Airflow DAGs
@@ -63,17 +63,27 @@ SSH to EC2 instance with the command below:
 ```
 ssh -i ec2-key.pem ec2-user@**.**.**.**
 ```
-After logging in, downland and install miniconda:
+After logging in, downland miniconda, and follow instructions installing it:
 ```
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
 bash Miniconda3-latest-Linux-x86_64.sh
 ```
-Clone codes from gitbucket repo
+Install git:
+```
+sudo yum install git
+```
+**You need to re-open current shell in order to use conda:**
+```
+exit
+ssh -i ec2-key.pem ec2-user@**.**.**.**
+```
+Next, clone codes from gitbucket repo
 ```
 git clone https://github.com/rongjiang9037/data_engineer.git
 ```
 Run start.sh bash script. This script create conda environment with necessary packages and.
 ```
+cd data_engineer
 bash start.sh
 ```
 ## Set up apache airflow at the EC2 instance
