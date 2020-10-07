@@ -36,9 +36,9 @@ Most of the AWS service used in this application is covered by the free-tier pro
 ## Create an IAM User with programmatic access
 Follow the [instructions](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html#id_users_create_console) to create an IAM user. 
 In the 4th step, choose "programmatic access". And attach **"Administrator Access"** to the user when setting permissions. A more detailed instruction can be found [here](https://blog.ipswitch.com/how-to-create-an-ec2-instance-with-python).\
-Upon completion, download **Access Key ID and Secret Access Key**. 
-**To prevent others from connecting your AWS resources. Don't expose aws_credential.cfg online.**
-## Run the following command in your local terminal
+Upon completion, download **Access Key ID and Secret Access Key**. \
+**To prevent others from connecting your AWS resources, don't expose aws_credential.cfg online.**
+## Setting up AWS architecture your local computer
 1. Clone git repo to local computer:
 ```
 git clone https://github.com/rongjiang9037/data_engineer.git
@@ -63,20 +63,31 @@ SSH to EC2 instance with the command below:
 ```
 ssh -i ec2-key.pem ec2-user@**.**.**.**
 ```
+If you recieve the following message, type in `yes` to proceed.
+```=
+The authenticity of host '*.**.***.** (*.**.***.**)' can't be established.
+ECDSA key fingerprint is SHA256:***.
+Are you sure you want to continue connecting (yes/no/[fingerprint])? 
+```
 After logging in, downland miniconda, and follow instructions installing it:
 ```
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
 bash Miniconda3-latest-Linux-x86_64.sh
 ```
-Install git:
+The following message indicating conda has been installed on your machine:
 ```
-sudo yum install git
+Thank you for installing Miniconda3!
 ```
 **You need to re-open current shell in order to use conda:**
 ```
 exit
 ssh -i ec2-key.pem ec2-user@**.**.**.**
 ```
+Install git:
+```
+sudo yum install git
+```
+
 Next, clone codes from gitbucket repo
 ```
 git clone https://github.com/rongjiang9037/data_engineer.git

@@ -326,7 +326,7 @@ def create_postgres_db(ec2_client, vpc,  subnet_prv_empty, subnet_prv_rds):
     rds_sg_id = rds_sg["GroupId"]
 
     ## 1.2 get default security group id
-    print("\n===Config security group, open port 5432 for postgres access.")
+    print("\n===Config security group, open port 5432 for accessing Postgres DB.")
     sg = ec2_client.describe_security_groups(Filters=[{"Name": "vpc-id",
                                                         "Values": [vpc.vpc_id]}
                                                      ])
