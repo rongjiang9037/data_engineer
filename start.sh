@@ -14,6 +14,10 @@ conda env create -f /home/ec2-user/data_engineer/env.yml
 
 ## activate environment
 echo "Activating environment: $EVN_NAME"
+## export conda functions
+export CONDAPATH=$(conda info --base)
+source $CONDAPATH/etc/profile.d/conda.sh
+
 conda activate immigration_demographics_env
 echo "Conda environment $EVN_NAME is ready"
 
