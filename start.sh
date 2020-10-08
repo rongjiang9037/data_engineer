@@ -21,8 +21,5 @@ source $CONDAPATH/etc/profile.d/conda.sh
 conda activate immigration_demographics_env
 echo "Conda environment $EVN_NAME is ready"
 
-## install airflow
-echo "Installing Apache Airflow..."
-pip install -r requirments.txt
 
 
