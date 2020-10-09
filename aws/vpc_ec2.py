@@ -48,11 +48,11 @@ IG_NAME                = config_instance.get("IG", "NAME")
 ## security group
 RDS_SG_NAME            = config_instance.get("SG", "RDS_SG_NAM")
 ## RDS
-RDS_NAME               = config_instance.get("RDS", "NAME")
+RDS_NAME               = config_instance.get("RDS", "DB_NAME")
 RDS_IDENTIFIER         = config_instance.get("RDS", "RDS_IDENTIFIER")
 RDS_TYPE               = config_instance.get("RDS", "TYPE")
 RDS_USER_NAME          = config_instance.get("RDS", "USER_NAME")
-RDS_PWD                = config_instance.get("RDS", "PWD")
+RDS_PWD                = config_instance.get("RDS", "PASSWRD")
 
 
 def get_keypair(ec2):

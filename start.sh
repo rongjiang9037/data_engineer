@@ -21,5 +21,4 @@ source $CONDAPATH/etc/profile.d/conda.sh
 conda activate immigration_demographics_env
 echo "Conda environment $EVN_NAME is ready"
 
-
-
+exit 0

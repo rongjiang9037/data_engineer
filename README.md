@@ -43,7 +43,7 @@ Upon completion, download **Access Key ID and Secret Access Key**. \
 ```
 git clone https://github.com/rongjiang9037/data_engineer.git
 ```
-2. Copy AWS credentials (KEY, SECRET KEY, ARN)to:   `config/aws_credential.ckg` \
+2. Copy AWS credentials (KEY, SECRET KEY)to:   `config/aws_credential.ckg` \
 A sample notice can be found in `config/aws_credentials_sample.cfg` 
 
 3. Create VPC, subnets, EC2 instance for this application:
@@ -92,11 +92,20 @@ Next, clone codes from gitbucket repo
 ```
 git clone https://github.com/rongjiang9037/data_engineer.git
 ```
-Run start.sh bash script. This script create conda environment with necessary packages and.
+Run start.sh bash script. This script create conda environment with necessary packages.
 ```
 cd data_engineer
-bash start.sh
+source start.sh
 ```
 ## Set up apache airflow at the EC2 instance
-After log in into the EC2 instance, follow [here](https://medium.com/@christo.lagali/getting-airflow-up-and-running-on-an-ec2-instance-ae4f3a69441) to set up Apache Airflow installation.
-
+Copy your AWS credentials to `aws_credentials_sample.cfg`
+```
+cd config
+vi aws_credentials_sample.cfg
+```
+click ESC+":wq" to save and exit vim editor.\
+run the `airflow_config.sh" file to install airflow and connect it to postgres database.
+```
+cd ..
+source airflow_config.sh
+```
