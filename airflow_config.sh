@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 
-## set your AWS credential here
-export AWS_ACCESS_KEY_ID=
-export AWS_SECRET_ACCESS_KEY=
+## get AWS credential from aws_credentials.cfg
+export AWS_ACCESS_KEY_ID=$(sed -n "/KEY=/p" config/aws_credentials.cfg | sed "s/KEY=//g")
+export AWS_SECRET_ACCESS_KEY=$(sed -n "/SECRET=/p" config/aws_credentials.cfg | sed "s/SECRET=//g")
 
 ## set up AWS credentials
-cd ~/.aws
-sed -i "/^aws_access_key_id */s/=.*$/=$AWS_ACCESS_KEY_ID/" credentials
-sed -i "/^aws_secret_access_key */s/=.*$/=$AWS_SECRET_ACCESS_KEY/" credentials
+sed -i "/aws_access_key_id */s/=.*$/=$AWS_ACCESS_KEY_ID/" ~/.aws/credentials
+### escaping '/' if secret_access_key contains it
+export AWS_SECRET_ACCESS_KEY=$(echo $AWS_SECRET_ACCESS_KEY | sed "s+\/+\\\\/+g")
+sed -i "/aws_secret_access_key */s/=.*$/=$AWS_SECRET_ACCESS_KEY/" ~/.aws/credentials
 
 ## install airflow
 echo "===Installing Apache Airflow..."

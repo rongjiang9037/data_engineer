@@ -10,7 +10,6 @@ config_aws.read_file(open("../config/aws_credentials.cfg"))
 
 KEY                    = config_aws.get("AWS","KEY")
 SECRET                 = config_aws.get("AWS","SECRET")
-ARN                    = config_aws.get("AWS", "IAM_ARN")
 
 config_instance = configparser.ConfigParser()
 config_instance.read_file(open("../config/aws_setup.cfg"))
