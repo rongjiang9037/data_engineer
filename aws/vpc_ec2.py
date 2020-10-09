@@ -52,6 +52,8 @@ RDS_SG_NAME            = config_instance.get("SG", "RDS_SG_NAM")
 RDS_NAME               = config_instance.get("RDS", "NAME")
 RDS_IDENTIFIER         = config_instance.get("RDS", "RDS_IDENTIFIER")
 RDS_TYPE               = config_instance.get("RDS", "TYPE")
+RDS_USER_NAME          = config_instance.get("RDS", "USER_NAME")
+RDS_PWD                = config_instance.get("RDS", "PWD")
 
 
 def get_keypair(ec2):
@@ -380,8 +382,8 @@ def create_postgres_db(ec2_client, vpc,  subnet_prv_empty, subnet_prv_rds):
                        # General purpose SSD
                        StorageType="gp2",
                        MultiAZ=False,
-                       MasterUsername="immigrate_demo",
-                       MasterUserPassword="=p<%Gs7TS_pd%-",
+                       MasterUsername=RDS_USER_NAME,
+                       MasterUserPassword=RDS_PWD,
                        VpcSecurityGroupIds=[rds_sg["GroupId"]],
                        DBSubnetGroupName=subnet_group["DBSubnetGroup"]["DBSubnetGroupName"],
                        DBInstanceClass=RDS_TYPE
