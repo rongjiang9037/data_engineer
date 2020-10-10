@@ -2,10 +2,17 @@
 
 ## get AWS credential from aws_credentials.cfg
 ## setting them as environment variables
-export AWS_ACCESS_KEY_ID=$(sed -n "/KEY=/p" config/aws_credentials_sample.cfg | sed "s/KEY=//g")
-export AWS_SECRET_ACCESS_KEY=$(sed -n "/SECRET=/p" config/aws_credentials_sample.cfg | sed "s/SECRET=//g")
+export AWS_ACCESS_KEY_ID=$(sed -n "/KEY=/p" config/aws_credentials.cfg | sed "s/KEY=//g")
+export AWS_SECRET_ACCESS_KEY=$(sed -n "/SECRET=/p" config/aws_credentials.cfg | sed "s/SECRET=//g")
 export AWS_DEFAULT_REGION=us-east-2
 export AWS_DEFAULT_OUTPUT=json
+
+## save AWS credentials into ~/.aws/credentials and ~/.aws/config
+sed -i "/^aws_access_key_id */s/=.*$/= $AWS_ACCESS_KEY_ID/" $HOME/.aws/credentials
+sed -i "/^aws_secret_access_key */s/=.*$/= $AWS_SECRET_ACCESS_KEY/" $HOME/.aws/credentials
+sed -i "/^output */s/=.*$/= $AWS_DEFAULT_OUTPUT/" $HOME/.aws/config
+sed -i "/^region */s/=.*$/= $AWS_DEFAULT_REGION/" $HOME/.aws/config
+
 
 ## get RDS parameters from aws_setup config
 export USERNAME=$(sed -n "/USER_NAME=/p" config/aws_setup.cfg | sed "s/USER_NAME=//g")
