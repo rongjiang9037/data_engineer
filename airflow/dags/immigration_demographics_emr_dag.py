@@ -109,10 +109,10 @@ def demo_etl(**kwargs):
     df_demo = pd.read_csv(demo_input_url)
 
     ## demographic data is pretty clean so no need to process
-    df_demo = df_demo[['city', 'state', 'median_age', 'male_population', 'female_population',
-       'total_population', 'number_of_veterans', 'foreign-born',
-       'average_household_size', 'state_code', 'race', 'count']]
-    df_demo['demo_key'] = np.range(df_demo.shape[0])
+    df_demo = df_demo[["city", "state_code", "median_age", "male_population", "female_population",
+       "total_population", "number_of_veterans", "foreign-born",
+       "average_household_size", "race"]]
+    df_demo["demo_key"] = np.range(df_demo.shape[0])
 
     ## save to S3
     demo_output_url = "s3://{}/{}".format(s3_bucket_name, demo_output_key)
@@ -149,7 +149,7 @@ dag = DAG(
 
 
 start_task = DummyOperator(
-    task_id='Start_execution',
+    task_id="Start_execution",
     dag=dag
 )
 
@@ -187,8 +187,7 @@ process_time_task = PythonOperator(
     task_id = "process_time_data",
     python_callable=submit_to_emr,
     params={
-        "file":"/Users/margaret/OneDrive/Documents/Udacity/data_engineer/data_engineer/airflow/dags/Immigation_ETL/time_table.py",
-        # "file":"/home/ec2-user/airflow/dags/Immigation_ETL/time_table.py",
+        "file":"/home/ec2-user/airflow/dags/Immigation_ETL/time_table.py",
         "job_name":"process time table",
         "key_words":{
                 "S3_BUCKET_NAME": Variable.get("S3_BUCKET_NAME"),
@@ -217,8 +216,7 @@ check_i94_data_task = PythonOperator(
     task_id="check_i94_data",
     python_callable=submit_to_emr,
     params={
-        "file":"/Users/margaret/OneDrive/Documents/Udacity/data_engineer/data_engineer/airflow/dags/Immigation_ETL/i94_data_quality.py",
-        # "file":"/home/ec2-user/airflow/dags/Immigation_ETL/i94_data_quality.py",
+        "file":"/home/ec2-user/airflow/dags/Immigation_ETL/i94_data_quality.py",
         "job_name":"check data quality for i94 data",
         "key_words":{
                 "S3_BUCKET_NAME": Variable.get("S3_BUCKET_NAME"),
@@ -233,8 +231,7 @@ check_time_data_task = PythonOperator(
     task_id="check_time_data",
     python_callable=submit_to_emr,
     params={
-        "file":"/Users/margaret/OneDrive/Documents/Udacity/data_engineer/data_engineer/airflow/dags/Immigation_ETL/time_data_quality.py",
-        # "file":"/home/ec2-user/airflow/dags/Immigation_ETL/time_data_quality.py",
+        "file":"/home/ec2-user/airflow/dags/Immigation_ETL/time_data_quality.py",
         "job_name":"check data quality for time data",
         "key_words":{
                 "S3_BUCKET_NAME": Variable.get("S3_BUCKET_NAME"),
