@@ -169,7 +169,8 @@ process_i94_task = PythonOperator(
     task_id="process_i94_data",
     python_callable=submit_to_emr,
     params={
-        "file":"/home/ec2-user/airflow/dags/Immigation_ETL/i94_entry_table.py",
+        "file":"/Users/margaret/OneDrive/Documents/Udacity/data_engineer/data_engineer/airflow/dags/Immigation_ETL/i94_entry_table.py",
+        # "file":"/home/ec2-user/airflow/dags/Immigation_ETL/i94_entry_table.py",
         "job_name":"process i94 data",
         "key_words":{
                 "S3_BUCKET_NAME": Variable.get("S3_BUCKET_NAME"),
@@ -186,7 +187,8 @@ process_time_task = PythonOperator(
     task_id = "process_time_data",
     python_callable=submit_to_emr,
     params={
-        "file":"/home/ec2-user/airflow/dags/Immigation_ETL/time_table.py",
+        "file":"/Users/margaret/OneDrive/Documents/Udacity/data_engineer/data_engineer/airflow/dags/Immigation_ETL/time_table.py",
+        # "file":"/home/ec2-user/airflow/dags/Immigation_ETL/time_table.py",
         "job_name":"process time table",
         "key_words":{
                 "S3_BUCKET_NAME": Variable.get("S3_BUCKET_NAME"),
@@ -215,7 +217,8 @@ check_i94_data_task = PythonOperator(
     task_id="check_i94_data",
     python_callable=submit_to_emr,
     params={
-        "file":"/home/ec2-user/airflow/dags/Immigation_ETL/i94_data_quality.py",
+        "file":"/Users/margaret/OneDrive/Documents/Udacity/data_engineer/data_engineer/airflow/dags/Immigation_ETL/i94_data_quality.py",
+        # "file":"/home/ec2-user/airflow/dags/Immigation_ETL/i94_data_quality.py",
         "job_name":"check data quality for i94 data",
         "key_words":{
                 "S3_BUCKET_NAME": Variable.get("S3_BUCKET_NAME"),
@@ -230,7 +233,8 @@ check_time_data_task = PythonOperator(
     task_id="check_time_data",
     python_callable=submit_to_emr,
     params={
-        "file":"/home/ec2-user/airflow/dags/Immigation_ETL/time_data_quality.py",
+        "file":"/Users/margaret/OneDrive/Documents/Udacity/data_engineer/data_engineer/airflow/dags/Immigation_ETL/time_data_quality.py",
+        # "file":"/home/ec2-user/airflow/dags/Immigation_ETL/time_data_quality.py",
         "job_name":"check data quality for time data",
         "key_words":{
                 "S3_BUCKET_NAME": Variable.get("S3_BUCKET_NAME"),
