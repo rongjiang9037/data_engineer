@@ -40,6 +40,10 @@ sed -i "/^load_examples */s/=.*$/= False/" airflow.cfg
 echo "Use LocalExecutor."
 sed -i "/^executor */s/=.*$/= LocalExecutor/" airflow.cfg
 
+echo "Change dag folder"
+export HOME_PATH=$(echo $HOME | sed 's/\//\\\//g')
+sed -i "/^dags_folder */s/=.*$/= $HOME_PATH\/data_engineer\/airflow\/dags/" airflow.cfg
+
 ## reinit database
 echo "===Initiating Airflow database"
 #source ~/.bashrc

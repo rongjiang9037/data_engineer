@@ -109,3 +109,9 @@ run the `airflow_config.sh" file to install airflow and connect it to postgres d
 cd ..
 source airflow_config.sh
 ```
+## Open Apache Airflow UI
+Open `your.ip.address:8080` in your browser and You will be able to see two airflow dags.
+![Image of screenshot](https://www.dropbox.com/s/9q72fg0v81bkjxy/airflow_screenshot.png?raw=1)
+In the above screenshot, my EC2 instance has public IP: 18.189.235.99. \
+Replace that with public IP address of your instance!\
+Now, you can try to run dags and check data process status!
