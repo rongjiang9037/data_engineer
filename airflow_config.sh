@@ -15,9 +15,9 @@ sed -i "/^region */s/=.*$/= $AWS_DEFAULT_REGION/" $HOME/.aws/config
 
 
 ## get RDS parameters from aws_setup config
-export USERNAME=$(sed -n "/USER_NAME=/p" config/aws_setup.cfg | sed "s/USER_NAME=//g")
-export PASSWRD=$(sed -n "/PASSWRD=/p" config/aws_setup.cfg | sed "s/PASSWRD=//g")
-export DB_NAME=$(sed -n "/DB_NAME=/p" config/aws_setup.cfg | sed "s/DB_NAME=//g")
+USERNAME=$(sed -n "/USER_NAME=/p" config/aws_setup.cfg | sed "s/USER_NAME=//g")
+PASSWRD=$(sed -n "/PASSWRD=/p" config/aws_setup.cfg | sed "s/PASSWRD=//g")
+DB_NAME=$(sed -n "/DB_NAME=/p" config/aws_setup.cfg | sed "s/DB_NAME=//g")
 
 
 ## install airflow & PostgreSQL
@@ -29,11 +29,11 @@ sudo yum install postgresql-server
 
 ## get endpoint of RDS
 echo "Connecting Airflow to Postgres DB"
-export ENDPOINT=$(aws rds --region us-east-2 describe-db-instances --db-instance-identifier immigrate-demo-db --query "DBInstances[*].Endpoint.Address" \
+ENDPOINT=$(aws rds --region us-east-2 describe-db-instances --db-instance-identifier immigrate-demo-db --query "DBInstances[*].Endpoint.Address" \
                     | sed -n '2 p' | sed "s/[[:blank:]]*\"[[:blank:]]*//g")
 
 ## get PostgreSQL connection string
-export PGSQL=$(echo "postgresql://$USERNAME:$PASSWRD@$ENDPOINT:5432/$DB_NAME" | sed 's/\//\\\//g')
+PGSQL=$(echo "postgresql://$USERNAME:$PASSWRD@$ENDPOINT:5432/$DB_NAME" | sed 's/\//\\\//g')
 
 
 ## config airflow.cfg
@@ -45,11 +45,13 @@ echo "Disable sample dag"
 sed -i "/^load_examples */s/=.*$/= False/" airflow.cfg
 
 ## Careful, use LocalExecutor require more RAM
+## if your airflow fails to queue tasks
+## comment out these 2 commands
 echo "Use LocalExecutor."
 sed -i "/^executor */s/=.*$/= LocalExecutor/" airflow.cfg
 
 echo "Change dag folder"
-export HOME_PATH=$(echo $HOME | sed 's/\//\\\//g')
+HOME_PATH=$(echo $HOME | sed 's/\//\\\//g')
 sed -i "/^dags_folder */s/=.*$/= $HOME_PATH\/data_engineer\/airflow\/dags/" airflow.cfg
 
 ## reinit database
@@ -58,5 +60,8 @@ echo "===Initiating Airflow database"
 airflow initdb
 
 echo "===Airflow is ready to use!"
+
+echo "===Starting Airflow Service"
+
 
 exit 0

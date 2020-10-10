@@ -8,14 +8,14 @@ sudo yum -y install gcc
 echo "Updating conda..."
 conda update -n base -c defaults conda
 
-export EVN_NAME=immigration_demographics_env
+EVN_NAME=immigration_demographics_env
 echo "Creating conda environment: $ENV_NAME"
 conda env create -f $HOME/data_engineer/env.yml
 
 ## activate environment
 echo "Activating environment: $EVN_NAME"
 ## export conda functions
-export CONDAPATH=$(conda info --base)
+CONDAPATH=$(conda info --base)
 source $CONDAPATH/etc/profile.d/conda.sh
 
 conda activate immigration_demographics_env
