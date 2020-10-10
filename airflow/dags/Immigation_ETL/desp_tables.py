@@ -17,6 +17,7 @@ def extract_label_desp_data(**kwargs):
     S3_BUEKCT_REGION = Variable.get("S3_BUEKCT_REGION")
 
     ## read data from S3
+    logging.info("Reading label description data from S3..")
     s3 = boto3.resource('s3',
                         aws_access_key_id=AWS_KEY,
                         aws_secret_access_key= AWS_SECRET,
@@ -38,6 +39,7 @@ def extract_label_desp_data(**kwargs):
         if 'I94VISA' in desp:
             i94_visa = desp
 
+    logging.info("Cleaning label description data...")
     ## clean raw data and save them as a DataFrame
     ### 1. port data
     i94_port = i94_port.replace("INT''L FALLS, MN", "INTL FALLS, MN")
@@ -63,6 +65,7 @@ def extract_label_desp_data(**kwargs):
     visa_list = [list(x) + ['visa'] for x in visa_list]
 
     ### combine and save as DataFrame to S3
+    logging.info("Saving label description data to S3...")
     combined_list = port_info_list + region_list + i94mode_list + visa_list + state_info_list
     df = pd.DataFrame(combined_list, columns=['code', 'value', 'type'])
     output_path = "s3://{}/{}".format(s3_bucket_name, output_key_path)

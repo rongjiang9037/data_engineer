@@ -10,7 +10,7 @@ conda update -n base -c defaults conda
 
 export EVN_NAME=immigration_demographics_env
 echo "Creating conda environment: $ENV_NAME"
-conda env create -f /home/ec2-user/data_engineer/env.yml
+conda env create -f $HOME/data_engineer/env.yml
 
 ## activate environment
 echo "Activating environment: $EVN_NAME"
