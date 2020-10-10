@@ -119,6 +119,7 @@ def demo_etl(**kwargs):
 
     demo_input_url = "s3://{}/{}".format(s3_bucket_name, demo_input_key)
     df_demo = pd.read_csv(demo_input_url, sep=";")
+    df_demo.columns = ['_'.join(col.lower().split()) for col in df_demo.columns]
 
     ## demographic data is pretty clean so no need to process
     df_demo = df_demo[["city", "state_code", "median_age", "male_population", "female_population",
