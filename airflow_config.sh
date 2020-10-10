@@ -37,6 +37,7 @@ sed -i "/^sql_alchemy_conn */s/=.*$/= $PGSQL/" airflow.cfg
 echo "Disable sample dag"
 sed -i "/^load_examples */s/=.*$/= False/" airflow.cfg
 
+## Careful, use LocalExecutor require more RAM
 echo "Use LocalExecutor."
 sed -i "/^executor */s/=.*$/= LocalExecutor/" airflow.cfg
 

@@ -19,6 +19,9 @@ The ETL process is orchestrated with Apache Airflow and the whole process is run
 ![Image of aws architecture](https://www.dropbox.com/s/4c0zv3fjkteyzgx/aws_architecture.jpg?raw=1)
 # General Prerequisites
 Python 3.8 or higher version is required for this application.
+- s3fs
+- fsspec
+- pip
 - boto3 =1.14.31
 - botocore =1.17.44
 # Data Schema
@@ -36,7 +39,7 @@ Most of the AWS service used in this application is covered by the free-tier pro
 ## Create an IAM User with programmatic access
 Follow the [instructions](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html#id_users_create_console) to create an IAM user. 
 In the 4th step, choose "programmatic access". And attach **"Administrator Access"** to the user when setting permissions. A more detailed instruction can be found [here](https://blog.ipswitch.com/how-to-create-an-ec2-instance-with-python).\
-Upon completion, download **Access Key ID and Secret Access Key**. \
+Upon completion, download **Access Key ID and Secret Access Key** and **copy them to `aws_credentials.cfg`**.\
 **To prevent others from connecting your AWS resources, don't expose aws_credential.cfg online.**
 ## Setting up AWS architecture your local computer
 1. Clone git repo to local computer:
@@ -48,7 +51,7 @@ A sample notice can be found in `config/aws_credentials_sample.cfg`
 
 3. Create VPC, subnets, EC2 instance for this application:
 ```
-cd data_enginner/aws
+cd data_enginner
 bash setup_aws_architecture.sh
 ```
 The console will have output:
@@ -98,20 +101,19 @@ cd data_engineer
 source start.sh
 ```
 ## Set up apache airflow at the EC2 instance
-Copy your AWS credentials to `aws_credentials_sample.cfg`
-```
-cd config
-vi aws_credentials_sample.cfg
-```
-click ESC+":wq" to save and exit vim editor.\
 run the `airflow_config.sh" file to install airflow and connect it to postgres database.
 ```
 cd ..
 source airflow_config.sh
 ```
+Copy your AWS credentials to `config/aws_credentials.cfg` on EC2 instance:
+```
+vi config/aws_credentials.cfg
+```
+Press ESC+`:wq` to save and exit vim editor after the copy.
 ## Open Apache Airflow UI
-Open `your.ip.address:8080` in your browser and You will be able to see two airflow dags.
+1. Open `your.ip.address:8080` in your browser and You will be able to see two airflow dags.
 ![Image of screenshot](https://www.dropbox.com/s/9q72fg0v81bkjxy/airflow_screenshot.png?raw=1)
 In the above screenshot, my EC2 instance has public IP: 18.189.235.99. \
 Replace that with public IP address of your instance!\
-Now, you can try to run dags and check data process status!
+Now, you can go back to "DAGS" page, try to run dags and check data process status!

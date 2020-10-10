@@ -1,6 +1,8 @@
+import os
 import datetime
 import time
 import logging
+import configparser
 
 import pandas as pd
 
@@ -27,6 +29,16 @@ Variable.set("I94_MODE_OUTPUT_FILE_KEY", "output/i94_mode_table.csv")
 Variable.set("STATE_OUTPUT_FILE_KEY", "output/state_table.csv")
 Variable.set("VISA_OUTPUT_FILE_KEY", "output/visa_table.csv")
 Variable.set("LABEL_DESP_STAGING_PATH", "output/label_desp_staging.csv")
+
+## AWS credentials
+config_aws = configparser.ConfigParser()
+config_path = os.path.join(os.environ['HOME'], "data_engineer/config/aws_credentials.cfg")
+config_aws.read_file(open(config_path))
+
+KEY                    = config_aws.get("AWS","KEY")
+SECRET                 = config_aws.get("AWS","SECRET")
+Variable.set("AWS_KEY", KEY)
+Variable.set("AWS_SECRET", SECRET)
 
 
 

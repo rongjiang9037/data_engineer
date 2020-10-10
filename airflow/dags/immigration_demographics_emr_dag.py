@@ -1,6 +1,8 @@
+import os
 import datetime
 import time
 import logging
+import configparser
 
 import pandas as pd
 import numpy as np
@@ -36,6 +38,16 @@ Variable.set("DEMO_INPUT_FILE_KEY", "data/us-cities-demographics.csv")
 Variable.set("I94_OUTPUT_FILE_KEY", "output/i94_table.parquet")
 Variable.set("TIME_OUTPUT_FILE_KEY", "output/time_table.parquet")
 Variable.set("DEMO_OUTPUT_FILE_KEY", "output/demo_tabler.csv")
+
+## AWS credentials
+config_aws = configparser.ConfigParser()
+config_path = os.path.join(os.environ['HOME'], "data_engineer/config/aws_credentials.cfg")
+config_aws.read_file(open(config_path))
+
+KEY                    = config_aws.get("AWS","KEY")
+SECRET                 = config_aws.get("AWS","SECRET")
+Variable.set("AWS_KEY", KEY)
+Variable.set("AWS_SECRET", SECRET)
 
 
 def create_emr():
