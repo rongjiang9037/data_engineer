@@ -51,7 +51,7 @@ A sample notice can be found in `config/aws_credentials_sample.cfg`
 
 3. Create VPC, subnets, EC2 instance for this application:
 ```
-cd data_enginner
+cd data_engineer
 bash setup_aws_architecture.sh
 ```
 The console will have output:
