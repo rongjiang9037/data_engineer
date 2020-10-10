@@ -125,7 +125,7 @@ def demo_etl(**kwargs):
     df_demo = df_demo[["city", "state_code", "median_age", "male_population", "female_population",
        "total_population", "number_of_veterans", "foreign-born",
        "average_household_size", "race"]]
-    df_demo["demo_key"] = np.range(df_demo.shape[0])
+    df_demo["demo_key"] = np.arange(df_demo.shape[0])
 
     ## save to S3
     demo_output_url = "s3://{}/{}".format(s3_bucket_name, demo_output_key)
