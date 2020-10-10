@@ -18,6 +18,7 @@ from Immigation_ETL import desp_tables_quality as data_quality
 ## SET variables
 ## S3
 Variable.set("S3_BUCKET_NAME", "immigrate-demographics-s3-1629")
+Variable.set("S3_BUEKCT_REGION", "us-east-2")
 
 ## input file key
 Variable.set("LABEL_DESP_PATH", "data/I94_SAS_Labels_Descriptions.SAS")

@@ -14,13 +14,13 @@ def extract_label_desp_data(**kwargs):
     output_key_path = kwargs["params"]["LABEL_DESP_STAGING_PATH"]
     AWS_KEY = Variable.get("AWS_KEY")
     AWS_SECRET = Variable.get("AWS_SECRET")
+    S3_BUEKCT_REGION = Variable.get("S3_BUEKCT_REGION")
 
     ## read data from S3
     s3 = boto3.resource('s3',
                         aws_access_key_id=AWS_KEY,
-                        aws_secret_access_key= AWS_SECRET)
-
-
+                        aws_secret_access_key= AWS_SECRET,
+                        region_name=S3_BUEKCT_REGION)
 
     obj = s3.Object(s3_bucket_name, label_desp_key_path)
     data_str = obj.get()['Body'].read()
