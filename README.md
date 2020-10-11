@@ -28,7 +28,7 @@ Python 3.8 or higher version is required for this application.
 ![Image of ER Diagram](https://www.dropbox.com/s/399y0g2vwishgxa/capstone_project.jpeg?raw=1)
 # Apache Airflow DAGs
 - Dag to process i94, time and demographics data with EMR cluster
-![Image of dag](https://www.dropbox.com/s/r1nurixzmrruka6/process_label_desciprion_dag.png?raw=1)
+![Image of dag](https://www.dropbox.com/s/5ro37hcwlveyeka/process_i94_dag.png?raw=1)
 - Dag to process state, visa type, port, country tables from label description file
 ![Image of dag](https://www.dropbox.com/s/r1nurixzmrruka6/process_label_desciprion_dag.png?raw=1)
 
@@ -98,19 +98,23 @@ git clone https://github.com/rongjiang9037/data_engineer.git
 Run start.sh bash script. This script create conda environment with necessary packages.
 ```
 cd data_engineer
-source start.sh
+source ec3_env_setup.sh
 ```
 ## Set up apache airflow at the EC2 instance
 run the `airflow_config.sh" file to install airflow and connect it to postgres database.
 ```
 cd ..
-source airflow_config.sh
+source airflow_setup.sh
 ```
 Copy your AWS credentials to `config/aws_credentials.cfg` on EC2 instance:
 ```
 vi config/aws_credentials.cfg
 ```
-Press ESC+`:wq` to save and exit vim editor after the copy.
+Press ESC+`:wq` to save and exit vim editor after the copy.\
+Start Apache Airflow:
+```
+source airflow_start.sh
+``` 
 ## Open Apache Airflow UI
 1. Open `your.ip.address:8080` in your browser and You will be able to see two airflow dags.
 ![Image of screenshot](https://www.dropbox.com/s/9q72fg0v81bkjxy/airflow_screenshot.png?raw=1)

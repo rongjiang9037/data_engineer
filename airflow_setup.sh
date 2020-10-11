@@ -37,6 +37,9 @@ PGSQL=$(echo "postgresql://$USERNAME:$PASSWRD@$ENDPOINT:5432/$DB_NAME" | sed 's/
 
 
 ## config airflow.cfg
+## Careful, using PostgreSQL database requires more RAM
+## if your airflow dag fails to allocate more memory
+## comment out these 3 commands
 echo "Pointing Airflow metadata database to PostgresSQL DB."
 cd ~/airflow
 sed -i "/^sql_alchemy_conn */s/=.*$/= $PGSQL/" airflow.cfg
@@ -44,7 +47,7 @@ sed -i "/^sql_alchemy_conn */s/=.*$/= $PGSQL/" airflow.cfg
 echo "Disable sample dag"
 sed -i "/^load_examples */s/=.*$/= False/" airflow.cfg
 
-## Careful, use LocalExecutor require more RAM
+## Careful, using LocalExecutor requires more RAM
 ## if your airflow fails to queue tasks
 ## comment out these 2 commands
 echo "Use LocalExecutor."
@@ -60,8 +63,5 @@ echo "===Initiating Airflow database"
 airflow initdb
 
 echo "===Airflow is ready to use!"
-
-echo "===Starting Airflow Service"
-
 
 exit 0
