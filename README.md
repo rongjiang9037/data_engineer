@@ -98,7 +98,7 @@ git clone https://github.com/rongjiang9037/data_engineer.git
 Run start.sh bash script. This script create conda environment with necessary packages.
 ```
 cd data_engineer
-source ec3_env_setup.sh
+source ec2_env_setup.sh
 ```
 ## Set up apache airflow at the EC2 instance
 run the `airflow_config.sh" file to install airflow and connect it to postgres database.
