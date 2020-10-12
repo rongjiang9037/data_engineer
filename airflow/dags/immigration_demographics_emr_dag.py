@@ -156,8 +156,10 @@ def data_check(**kwargs):
 
 dag = DAG(
     "immigration_demographics_analysis_emr_dag",
-    start_date = datetime.datetime.now(),
-    concurrency = 2
+    start_date = datetime.datetime(2016, 1, 1, 0, 0, 0 ,0),
+    end_date = datetime.datetime(2016, 12, 1, 0, 0, 0, 0),
+    concurrency = 2,
+    schedule_interval="@monthly"
 )
 
 
