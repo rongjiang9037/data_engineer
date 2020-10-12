@@ -3,7 +3,7 @@
 > The U.S. Census Bureau projects that **net international migration to the United States will become the primary driver of the nation’s population growth** between 2027 and 2038.
 > ------U.S. Census Bureau, “International Migration is Projected to Become Primary Driver of U.S. Population Growth for First Time in Nearly Two Centuries,”
 
-As U.S. Census Bureau's research shows, US immigration will be the major souce of the nation's population growth. This trend will change US social, demographic, cultural landscape and will affect local policy such as economy development, social security etc.  \
+As U.S. Census Bureau's research shows, US immigration will be the major source of the nation's population growth. This trend will change US social, demographic, cultural landscape and will affect local policy such as economic development, social security etc.  \
 To better understand this topic, we collected I94 data from US National Tourism and Trade Office and city demographics data from [OpenSoft](https://public.opendatasoft.com/explore/dataset/us-cities-demographics/export/), and build a data lake on S3 that can be easily queried by researchers, policy makers and immigrates.\
 The data description and relational diagram can be found [here](README.md#data-source) and [here](README.md#data-schema).\
 Data presented in the project can be used:
@@ -45,18 +45,31 @@ The galaxy-schema can be viewed as 2 combined star-schemas and each of it has a 
 
 ![Image of ER Diagram](https://www.dropbox.com/s/399y0g2vwishgxa/capstone_project.jpeg?raw=1)
 # Technology Chosen
-- AWS S3 for data storage: We chose AWS S3 for input data storage because **it's cost effective, scalable and that it support multiple data format**.
+- AWS S3 for data storage: We chose AWS S3 for input data storage because **it's cost effective, scalable and that it supports multiple data format**.
 - AWS EMR cluster to run Apache Spark: AWS EMR is a cloud solution designed for big data processing and is consisted of EC2 instances, which perform the work that you submit to your cluster. We chose EMR because we need to run Aparche Spark to batch process the ETL process and **it's easy to configure the number, type of instances to setup EMR cluster and to install software on it, in this project, Apache Spark**.
-- Apache Airflow for ETL orchestration: We chose it because it's ability to **schedule, scale and monitor** complex computational workflows. In this project, some ETL process has dependencies, for example EMR clusters creation. Airflow is better at orchestrating workflows than cron. Besides, Airflow also provide the data process flow chart to view running status and log which helps developers to spot processing errors
+- Apache Airflow for ETL orchestration: We chose it because it's ability to **schedule, scale and monitor** complex computational workflows. In this project, some ETL process has dependencies, for example EMR clusters creation. Airflow is better at orchestrating workflows than cron job. \
+Besides, Airflow also provide the data process flow chart to view running status and log which helps developers to spot processing errors
 - AWS S3 for data lake: We chose S3 for data lake for low cost, scalability, flexiblity.
 
 # AWS Infrasctructure
 ![Image of aws architecture](https://www.dropbox.com/s/4c0zv3fjkteyzgx/aws_architecture.jpg?raw=1)
 
-# Apache Airflow DAGs
-- Dag to process i94, time and demographics data with EMR cluster
+# ETL process
+- Dag to extract, process and load i94, time and demographics data with EMR cluster
+    * Create EMR cluster 
+    * Extract i94 entry data from S3 bucket and transform data types and save I94 data back to S3 as parquet file (partition by entry year and month).
+    * Extract entry date from i94 data, extract day, day of week, month, year information and store it in S3 bucket.
+    * Extract demographics data, select columns and save back to S3.
+    * Check data quality for each table
+    * Terminate EMR cluster.
+
 ![Image of dag](https://www.dropbox.com/s/5ro37hcwlveyeka/process_i94_dag.png?raw=1)
 - Dag to process state, visa type, port, country tables from label description file
+    * extract port code, country/region code, visa type raw data from I94 dictionary SAS file and save them as .csv file in S3.
+    * Process port code: filter only 'US' port, clean port address and load it as parquet file in S3.
+    * Process country/region, visa type: clean data format and load it as parquet file in S3.
+    * Check data quality for each table.
+
 ![Image of dag](https://www.dropbox.com/s/r1nurixzmrruka6/process_label_desciprion_dag.png?raw=1)
 
 # Scenarios
@@ -67,6 +80,9 @@ The galaxy-schema can be viewed as 2 combined star-schemas and each of it has a 
 - The pipelines would be run on a daily basis by 7 am every day.
     * Change "schedule_interval" parameter in dag setting to "0 7 * * *" to run the dag every morning at 7am.
 - The database needed to be accessed by 100+ people.
+    * Imrpove read/write performance by add indexes to database
+    * Restrict write access to analytical database when more people are using to avoid conflicts.
+    * Use Redshift concurrency scaling service to increase  its ability to handle heavy traffic
 
 # General Prerequisites
 Python 3.8 or higher version is required for this application.
