@@ -11,16 +11,15 @@ Data presented in the project can be used:
 - for researchers to predict future popultion growth
 - for policy makers to understand local demographic components and design policies to better serve people
 # Table of contents
-1. [Description](README.md#project-description)
+1. [Project Description](README.md#project-description)
 2. [Data Source](README.md#data-source)
-3. [Technolody Chosen](README.md#technolocy-chosen)
-2. [AWS infrastructure](README.md#aws-infrastructure)
-3. [General prerequisites](README.md#general-prerequisites)
-4. [Data Schema](README.md#data-schema)
-5. [Apache Airflow Chart](README.md#apache-airflow-chart)
-6. [Scenarios](README.md#scenarios)
-6. [General Prerequisites](README.md#general-prerequisites)
-6. [How to Start](README.md#how-to-start)
+3. [Data Schema](README.md#data-schema)
+4. [Technolody Chosen](README.md#technolocy-chosen)
+5. [AWS infrastructure](README.md#aws-infrastructure)
+6. [ETL Process](README.md#etl-process)
+7. [Scenarios](README.md#scenarios)
+8. [General prerequisites](README.md#general-prerequisites)
+9. [How to Start](README.md#how-to-start)
 
 # Project Description
 This project contains a process to extract US I94 immigration and demographic data stored in **AWS S3**, transform with **Apache Spark running on EMR clusters** and load back to **AWS S3** as parquet files.\
@@ -51,7 +50,7 @@ The galaxy-schema can be viewed as 2 combined star-schemas and each of it has a 
 Besides, Airflow also provide the data process flow chart to view running status and log which helps developers to spot processing errors
 - AWS S3 for data lake: We chose S3 for data lake for low cost, scalability, flexiblity.
 
-# AWS Infrasctructure
+# AWS Infrastructure
 ![Image of aws architecture](https://www.dropbox.com/s/4c0zv3fjkteyzgx/aws_architecture.jpg?raw=1)
 
 # ETL process
