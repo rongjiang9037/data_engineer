@@ -3,20 +3,71 @@
 > The U.S. Census Bureau projects that **net international migration to the United States will become the primary driver of the nation’s population growth** between 2027 and 2038.
 > ------U.S. Census Bureau, “International Migration is Projected to Become Primary Driver of U.S. Population Growth for First Time in Nearly Two Centuries,”
 
-**We are instrested to know if we can verify the above statement with current data.**
+As U.S. Census Bureau's research shows, US immigration will be the major souce of the nation's population growth. This trend will change US social, demographic, cultural landscape and will affect local policy such as economy development, social security etc.  \
+To better understand this topic, we collected I94 data from US National Tourism and Trade Office and city demographics data from [OpenSoft](https://public.opendatasoft.com/explore/dataset/us-cities-demographics/export/), and build a data lake on S3 that can be easily queried by researchers, policy makers and immigrates.\
+The data description and relational diagram can be found [here](README.md#data-source) and [here](README.md#data-schema).\
+Data presented in the project can be used:
+- for immigrates to find popular immigration destination
+- for researchers to predict future popultion growth
+- for policy makers to understand local demographic components and design policies to better serve people
 # Table of contents
-1. [Description](README.md#description)
+1. [Description](README.md#project-description)
+2. [Data Source](README.md#data-source)
+3. [Technolody Chosen](README.md#technolocy-chosen)
 2. [AWS infrastructure](README.md#aws-infrastructure)
 3. [General prerequisites](README.md#general-prerequisites)
 4. [Data Schema](README.md#data-schema)
 5. [Apache Airflow Chart](README.md#apache-airflow-chart)
+6. [Scenarios](README.md#scenarios)
+6. [General Prerequisites](README.md#general-prerequisites)
 6. [How to Start](README.md#how-to-start)
 
-# Description
-This project contains a process to extract US I94 immigration and demographic data stored in AWS S3, transform with Spark and load back to S3 as parquet files.
-The ETL process is orchestrated with Apache Airflow and the whole process is running on Amazon Web Service cloud.
+# Project Description
+This project contains a process to extract US I94 immigration and demographic data stored in **AWS S3**, transform with **Apache Spark running on EMR clusters** and load back to **AWS S3** as parquet files.\
+This ETL process is orchestrated with **Apache Airflow** and the whole process is running on Amazon Web Service cloud.
+
+# Data Source
+- I94 Immigration Data: This data comes from the [US National Tourism and Trade Office](https://travel.trade.gov/research/reports/i94/historical/2016.html). This data records immigration records for each port entry partitioned by month of every year.
+- I94 Immigration dictionary: This comes with I94 immigration data. It decodes the port number, country node, visa type, i94 mode, state abbreviations etc.
+- U.S. City Demographic Data: This data comes from [OpenSoft](https://public.opendatasoft.com/explore/dataset/us-cities-demographics/export/). It contains city demogrpahics data such as age, male/female population for major races, number of foreign-born, number of veterans, number of household etc.
+
+# Data Schema
+We chose a galaxy-schema to model data because we have 2 fact tables and we would like to use a model similar to star-schema as it's easy to understand, query and analyze. \
+The galaxy-schema can be viewed as 2 combined star-schemas and each of it has a fact table: 
+- fact_i94: Built on i94 entry record from US National Tourism and Trade Office. **It can be used to join other dimension tables to count number of people enter US in different states, month, visa type etc.**
+- dim_port: A normalized table built from I94 immigration dictionary. It contains state, and address of each entry port.
+- dim_time: A normaliaed table build from I94 entry time column. It has day, week, month, year, weekday for each arrival date.
+- dim_i94_mode: A normaliaed table built from I94 immigration dictionary "entry mode" column.
+- dim_visa: A normalized table built from I94 immigration dictionary "visa type" column.
+- dim_country: A normalized table built from I94 immigration dictionary "country/region code" column.
+- dim_state: A normalized table built from I94 immigration dictionary "state" code column.
+- fact_demographics: It's built from raw US city demographics. 
+
+![Image of ER Diagram](https://www.dropbox.com/s/399y0g2vwishgxa/capstone_project.jpeg?raw=1)
+# Technology Chosen
+- AWS S3 for data storage: We chose AWS S3 for input data storage because **it's cost effective, scalable and that it support multiple data format**.
+- AWS EMR cluster to run Apache Spark: AWS EMR is a cloud solution designed for big data processing and is consisted of EC2 instances, which perform the work that you submit to your cluster. We chose EMR because we need to run Aparche Spark to batch process the ETL process and **it's easy to configure the number, type of instances to setup EMR cluster and to install software on it, in this project, Apache Spark**.
+- Apache Airflow for ETL orchestration: We chose it because it's ability to **schedule, scale and monitor** complex computational workflows. In this project, some ETL process has dependencies, for example EMR clusters creation. Airflow is better at orchestrating workflows than cron. Besides, Airflow also provide the data process flow chart to view running status and log which helps developers to spot processing errors
+- AWS S3 for data lake: We chose S3 for data lake for low cost, scalability, flexiblity.
+
 # AWS Infrasctructure
 ![Image of aws architecture](https://www.dropbox.com/s/4c0zv3fjkteyzgx/aws_architecture.jpg?raw=1)
+
+# Apache Airflow DAGs
+- Dag to process i94, time and demographics data with EMR cluster
+![Image of dag](https://www.dropbox.com/s/5ro37hcwlveyeka/process_i94_dag.png?raw=1)
+- Dag to process state, visa type, port, country tables from label description file
+![Image of dag](https://www.dropbox.com/s/r1nurixzmrruka6/process_label_desciprion_dag.png?raw=1)
+
+# Scenarios
+- The data was increased by 100x.
+    * Add more worker nodes in Apache Spark to increase power house
+    * For fast write: we may denormalize i94 entry data and store it in a NoSQL data base such as Apache Cassandra for fast writes
+    * For fast read & analysis: add composite key to Cassandra database to improve read performance and export a portion of data to analytical database such as RedShift
+- The pipelines would be run on a daily basis by 7 am every day.
+    * Change "schedule_interval" parameter in dag setting to "0 7 * * *" to run the dag every morning at 7am.
+- The database needed to be accessed by 100+ people.
+
 # General Prerequisites
 Python 3.8 or higher version is required for this application.
 - s3fs
@@ -24,13 +75,6 @@ Python 3.8 or higher version is required for this application.
 - pip
 - boto3 =1.14.31
 - botocore =1.17.44
-# Data Schema
-![Image of ER Diagram](https://www.dropbox.com/s/399y0g2vwishgxa/capstone_project.jpeg?raw=1)
-# Apache Airflow DAGs
-- Dag to process i94, time and demographics data with EMR cluster
-![Image of dag](https://www.dropbox.com/s/5ro37hcwlveyeka/process_i94_dag.png?raw=1)
-- Dag to process state, visa type, port, country tables from label description file
-![Image of dag](https://www.dropbox.com/s/r1nurixzmrruka6/process_label_desciprion_dag.png?raw=1)
 
 # How to start
 ## Create AWS Account
