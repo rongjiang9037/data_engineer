@@ -15,7 +15,7 @@ Data presented in the project can be used:
 2. [Data Source](README.md#data-source)
 3. [Data Schema](README.md#data-schema)
 4. [Data Dictionary](README.md#data-dictionary)
-5. [Technolody Chosen](README.md#technolocy-chosen)
+5. [Technology Chosen](README.md#technology-chosen)
 6. [AWS infrastructure](README.md#aws-infrastructure)
 7. [ETL Process](README.md#etl-process)
 8. [Scenarios](README.md#scenarios)
