@@ -115,10 +115,10 @@ This ETL process is orchestrated with **Apache Airflow** and the whole process i
 |state|string|||state name|Maryland|
 |median_age|double|||median age|33.8|
 |male_population|integer|||male population|40601|
-|female_population|integer|||female population|40601|
-|total_population|integer|||total population|40601|
-|number_of_veterans|integer|||number of veterans|40601|
-|foreign_born|integer|||foreign born population|40601|
+|female_population|integer|||female population|41862|
+|total_population|integer|||total population|82463|
+|number_of_veterans|integer|||number of veterans|1562|
+|foreign_born|integer|||foreign born population|30908|
 |average_household_size|double|||average household size|3.2|
 |state_code|string|||state code|MD|
 |race|string||||White|
