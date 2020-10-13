@@ -159,7 +159,7 @@ Besides, Airflow also provide the data process flow chart to view running status
 
 # Scenarios
 - The data was increased by 100x.
-    * Add more worker nodes in Apache Spark to increase power house
+    * Add more worker nodes in Apache Spark to increase horsepower
     * For fast write: we may denormalize i94 entry data and store it in a NoSQL data base such as Apache Cassandra for fast writes
     * For fast read & analysis: add composite key to Cassandra database to improve read performance and export a portion of data to analytical database such as RedShift
 - The pipelines would be run on a daily basis by 7 am every day.
